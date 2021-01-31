@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <limits.h>
 
-#define SIZE 36
-#define T 3
+#define SIZE 15000000
+#define T 4
 #define W (SIZE/(T*T))
 #define RO (T/2)
 
@@ -21,6 +22,8 @@ struct thread_data {
 pthread_barrier_t barrier;
 pthread_barrier_t phase2Barrier;
 pthread_barrier_t phase3Barrier;
+pthread_barrier_t phase4Barrier;
+pthread_barrier_t mergingPhaseBarrier;
 
 int* INPUT;
 
@@ -65,9 +68,19 @@ int* generateArrayDefault() {
 	return randoms;
 }
 
+int shouldContinueMerging(int * exchangeIndices, int size) {
+	for (int i = 0; i < size; i+=2) {
+		if (exchangeIndices[i] != exchangeIndices[i+1]) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int regularSamples[T*T];
 int pivots[T - 1];
 int partitions[T][T+1];
+int mergedPartitionLength[T]; // each thread will save its length here
 
 void* psrs(void *args) {
 	struct thread_data* data = (struct thread_data*) args;
@@ -111,17 +124,74 @@ void* psrs(void *args) {
 	printf("\n");
 	pthread_barrier_wait(&phase3Barrier);
 	/* Phase 4 */
+	int exchangeIndices[T*2];
+	int ei = 0;
+	for (int i = 0; i < T; i++) {
+		int st = partitions[i][data->id];
+		int en = partitions[i][data->id + 1];
+		exchangeIndices[ei++] = st;
+		exchangeIndices[ei++] = en;
+	}
+	// k way merge part
+	// printArray(exchangeIndices, 2* T);
+	// array size
+	int mergedLength = 0;
+	for (int i = 0; i < T * 2; i+=2) {
+		mergedLength += exchangeIndices[i + 1] - exchangeIndices[i];
+	}
+	
+	int* mergedValues = malloc(sizeof(int) * mergedLength);
+	mergedPartitionLength[data->id] = mergedLength;
+	int mi = 0;
+	// printf("Created an array of len %d\n", mergedLength);
+	while (shouldContinueMerging(exchangeIndices, T * 2)) {
+		// find minimum among current items
+		int min = INT_MAX;
+		int minPos = -1;
+		for (int i = 0; i < T * 2; i+=2) {
+			if (exchangeIndices[i] != exchangeIndices[i+1]) {
+				int ix = exchangeIndices[i];
+				if (INPUT[ix] < min) {
+					min = INPUT[ix];
+					minPos = i;
+				}
+			}
+		}
+		mergedValues[mi++] = min;
+		exchangeIndices[minPos]++;
+		// record its position
+		// add it to the mergedValues
+		// increment counter
+	}
+	//for (int i = 0; i < mergedLength; i++) {
+	//	printf("%d ", mergedValues[i]);
+	//}
+	//printf("\n");
+	pthread_barrier_wait(&phase4Barrier);
+	
+	int startPos = 0;
+	int x = data->id - 1;
+	while (x >= 0) {
+		startPos += mergedPartitionLength[x--];
+	}
+	for (int i = startPos; i < startPos + mergedLength; i++) {
+		INPUT[i] = mergedValues[i - startPos];
+	}
+	free(mergedValues);
+	pthread_barrier_wait(&mergingPhaseBarrier);
 }
 
 
 int main(){
-	INPUT = generateArrayDefault();//generateArrayOfSize(SIZE);
-	printArray(INPUT, SIZE);
+	INPUT = generateArrayOfSize(SIZE);
+	// printArray(INPUT, SIZE);
 	int perThread = SIZE / T;
 	
 	pthread_barrier_init(&barrier, NULL, T);
 	pthread_barrier_init(&phase2Barrier, NULL, T);
 	pthread_barrier_init(&phase3Barrier, NULL, T);
+	pthread_barrier_init(&phase4Barrier, NULL, T);
+	pthread_barrier_init(&mergingPhaseBarrier, NULL, T);
 	pthread_t THREADS[T];
 
 	for (int i = 1; i < T; i++) {
@@ -140,5 +210,7 @@ int main(){
 	
 	printf("Threads finished\n");
 
+	// printArray(INPUT, SIZE);
+	isSorted();
 	return 0;
 }
