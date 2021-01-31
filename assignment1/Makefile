@@ -7,3 +7,5 @@ second:
 debug:
 	gcc -Wall -g main2.c -lpthread -o main
 	gdb ./main
+gprof:
+	gcc -Wall -pg main2.c -lpthread -o main
