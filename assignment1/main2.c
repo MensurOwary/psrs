@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <limits.h>
 
-#define SIZE 15000000
+#define SIZE 39
 #define T 4
 #define W (SIZE/(T*T))
 #define RO (T/2)
@@ -94,7 +94,6 @@ void* psrs(void *args) {
 		ix++;
 	}	
 
-	printf("Thread %d waiting\n", data->id); 
 	pthread_barrier_wait(&barrier);
 	/* Phase 2 */
 	if (data->id == 0) { // inside the master thread
@@ -118,19 +117,17 @@ void* psrs(void *args) {
 		}
 	}
 	
-	for (int i = 0; i < T + 1; i++) {
-		printf("(T%d) : %d ", data->id, partitions[data->id][i]);
-	}
-	printf("\n");
+	// for (int i = 0; i < T + 1; i++) {
+	//	printf("(T%d) : %d ", data->id, partitions[data->id][i]);
+	// }
+	// printf("\n");
 	pthread_barrier_wait(&phase3Barrier);
 	/* Phase 4 */
 	int exchangeIndices[T*2];
 	int ei = 0;
 	for (int i = 0; i < T; i++) {
-		int st = partitions[i][data->id];
-		int en = partitions[i][data->id + 1];
-		exchangeIndices[ei++] = st;
-		exchangeIndices[ei++] = en;
+		exchangeIndices[ei++] = partitions[i][data->id];
+		exchangeIndices[ei++] = partitions[i][data->id+1];
 	}
 	// k way merge part
 	// printArray(exchangeIndices, 2* T);
@@ -159,14 +156,8 @@ void* psrs(void *args) {
 		}
 		mergedValues[mi++] = min;
 		exchangeIndices[minPos]++;
-		// record its position
-		// add it to the mergedValues
-		// increment counter
 	}
-	//for (int i = 0; i < mergedLength; i++) {
-	//	printf("%d ", mergedValues[i]);
-	//}
-	//printf("\n");
+	printf("Thread %d waits\n", data->id);
 	pthread_barrier_wait(&phase4Barrier);
 	
 	int startPos = 0;
@@ -183,6 +174,7 @@ void* psrs(void *args) {
 
 
 int main(){
+	printf("Size : %d\n", SIZE);
 	INPUT = generateArrayOfSize(SIZE);
 	// printArray(INPUT, SIZE);
 	int perThread = SIZE / T;
@@ -210,7 +202,7 @@ int main(){
 	
 	printf("Threads finished\n");
 
-	// printArray(INPUT, SIZE);
+	printArray(INPUT, SIZE);
 	isSorted();
 	return 0;
 }
