@@ -20,6 +20,7 @@ struct thread_data {
 
 pthread_barrier_t barrier;
 pthread_barrier_t phase2Barrier;
+pthread_barrier_t phase3Barrier;
 
 int* INPUT;
 
@@ -47,6 +48,12 @@ int* generateArrayOfSize(int size) {
 	return randoms;
 }
 
+void printArray(int* array, int size) {
+	for (int i = 0; i < size; i++) {
+		printf("%d ", array[i]);
+	}
+	printf("\n");
+}
 
 int* generateArrayDefault() {
 	int arr[36] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
@@ -60,6 +67,7 @@ int* generateArrayDefault() {
 
 int regularSamples[T*T];
 int pivots[T - 1];
+int partitions[T][T+1];
 
 void* psrs(void *args) {
 	struct thread_data* data = (struct thread_data*) args;
@@ -86,16 +94,25 @@ void* psrs(void *args) {
 	}
 	pthread_barrier_wait(&phase2Barrier);
 	/* Phase 3 */
-	printArray(pivots, T-1);
+	int pi = 0; // pivot counter
+	int pc = 1; // partition counter
+	partitions[data->id][0] = data->start;
+	partitions[data->id][T] = data->end;
+	for (int i = data->start; i < data->end && pi != T-1; i++) {
+		if (pivots[pi] < INPUT[i]) {
+			partitions[data->id][pc++] = i;
+			pi++;
+		}
+	}
+	
+	for (int i = 0; i < T + 1; i++) {
+		printf("(T%d) : %d ", data->id, partitions[data->id][i]);
+	}
+	printf("\n");
+	pthread_barrier_wait(&phase3Barrier);
 	/* Phase 4 */
 }
 
-void printArray(int* array, int size) {
-	for (int i = 0; i < size; i++) {
-		printf("%d ", array[i]);
-	}
-	printf("\n");
-}
 
 int main(){
 	INPUT = generateArrayDefault();//generateArrayOfSize(SIZE);
@@ -104,6 +121,7 @@ int main(){
 	
 	pthread_barrier_init(&barrier, NULL, T);
 	pthread_barrier_init(&phase2Barrier, NULL, T);
+	pthread_barrier_init(&phase3Barrier, NULL, T);
 	pthread_t THREADS[T];
 
 	for (int i = 1; i < T; i++) {
