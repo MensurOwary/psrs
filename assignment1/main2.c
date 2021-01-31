@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <limits.h>
 
-#define SIZE 39
+#define SIZE 32000000 
 #define T 4
 #define W (SIZE/(T*T))
 #define RO (T/2)
@@ -42,6 +42,15 @@ void isSorted() {
 	}
 }
 
+int isSorted2(int* arr, int size) {
+	for (int i = 0; i < size - 1; i++) {
+		if (arr[i] > arr[i+1]) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int* generateArrayOfSize(int size) {
 	srandom(15);
 	int* randoms = malloc(sizeof(int) * size);
@@ -75,6 +84,18 @@ int shouldContinueMerging(int * exchangeIndices, int size) {
 		}
 	}
 	return 0;
+}
+
+int* findMin(int * exchangeIndices, int size) {
+	for (int i = 0; i < size; i += 2) {
+		if (exchangeIndices[i] != exchangeIndices[i+1]) {
+			int* minAndPos = malloc(sizeof(int) * 2);
+			minAndPos[0] = INPUT[exchangeIndices[i]];
+			minAndPos[1] = i;
+			return minAndPos;
+		}
+	}
+	return NULL;
 }
 
 int regularSamples[T*T];
@@ -137,14 +158,19 @@ void* psrs(void *args) {
 		mergedLength += exchangeIndices[i + 1] - exchangeIndices[i];
 	}
 	
+	printArray(exchangeIndices, T * 2);
+	
 	int* mergedValues = malloc(sizeof(int) * mergedLength);
 	mergedPartitionLength[data->id] = mergedLength;
 	int mi = 0;
 	// printf("Created an array of len %d\n", mergedLength);
-	while (shouldContinueMerging(exchangeIndices, T * 2)) {
+	// while (shouldContinueMerging(exchangeIndices, T * 2)) {
+	while (mi < mergedLength) {
 		// find minimum among current items
-		int min = INT_MAX;
-		int minPos = -1;
+		int* minAndPos = findMin(exchangeIndices, T * 2);// INT_MAX;
+		if (minAndPos == NULL) break;
+		int min = minAndPos[0];
+		int minPos = minAndPos[1];
 		for (int i = 0; i < T * 2; i+=2) {
 			if (exchangeIndices[i] != exchangeIndices[i+1]) {
 				int ix = exchangeIndices[i];
@@ -154,9 +180,18 @@ void* psrs(void *args) {
 				}
 			}
 		}
+		free(minAndPos);
+		//if (mi+1 < mergedLength)  {
+		// printf("(%d, %d)\n", mi + 1, mergedLength);
 		mergedValues[mi++] = min;
 		exchangeIndices[minPos]++;
+		//}
 	}
+	printf("%d) Merging done? %d\n", data->id, shouldContinueMerging(exchangeIndices, T * 2));
+	printArray(exchangeIndices, T * 2);
+	printf("%d) Position of mi : %d / %d\n", data->id, mi, mergedLength); 
+	if (mi != mergedLength)
+		printf("%d) IsSorted : %d\n", data->id, isSorted2(mergedValues, mergedLength));
 	printf("Thread %d waits\n", data->id);
 	pthread_barrier_wait(&phase4Barrier);
 	
@@ -202,7 +237,7 @@ int main(){
 	
 	printf("Threads finished\n");
 
-	printArray(INPUT, SIZE);
+	// printArray(INPUT, SIZE);
 	isSorted();
 	return 0;
 }
