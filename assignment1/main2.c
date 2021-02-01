@@ -6,15 +6,15 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define SIZE 128000000 
-#define T 4
-#define W (SIZE/(T*T))
-#define RO (T/2)
 #define MASTER if (id == 0) 
+#define ISIZE sizeof(int)
 
-int cmpfunc (const void * a, const void * b) {
-	return ( *(int *) a - *(int*)b );
-}
+int SIZE; 
+int T;
+int W; 
+int RO; 
+
+int* INPUT;
 
 struct thread_data {
 	int id;
@@ -28,7 +28,10 @@ pthread_barrier_t phase3Barrier;
 pthread_barrier_t phase4Barrier;
 pthread_barrier_t mergingPhaseBarrier;
 
-int* INPUT;
+int cmpfunc (const void * a, const void * b) {
+	return ( *(int *) a - *(int*)b );
+}
+
 
 // checks if the INPUT array is sorted
 // used for debugging reasons
@@ -51,7 +54,7 @@ void isSorted() {
 // used for generating random arrays of the given size
 int* generateArrayOfSize(int size) {
 	srandom(15);
-	int* randoms = malloc(sizeof(int) * size);
+	int* randoms = malloc(ISIZE * size);
 	for (int i = 0; i < size; i++) {
 		randoms[i] = (int) random();
 	}
@@ -70,7 +73,7 @@ void printArray(int* array, int size) {
 int* generateArrayDefault() {
 	int arr[36] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
 	
-	int* randoms = malloc(sizeof(int) * 36);
+	int* randoms = malloc(ISIZE * 36);
 	for (int i = 0; i < 36; i++) {
 		randoms[i] = arr[i];
 	}
@@ -81,7 +84,7 @@ int* generateArrayDefault() {
 int* findInitialMin(int * exchangeIndices, int size) {
 	for (int i = 0; i < size; i += 2) {
 		if (exchangeIndices[i] != exchangeIndices[i+1]) {
-			int* minAndPos = malloc(sizeof(int) * 2);
+			int* minAndPos = malloc(ISIZE * 2);
 			minAndPos[0] = INPUT[exchangeIndices[i]];
 			minAndPos[1] = i;
 			return minAndPos;
@@ -90,10 +93,10 @@ int* findInitialMin(int * exchangeIndices, int size) {
 	return NULL;
 }
 
-int regularSamples[T*T]; // each thread will save the local regular samples here
-int pivots[T - 1]; // the selected pivots will be stored here
-int partitions[T][T+1]; // partition indices per thread (separated by the outer array index), and there is T+1 indices. 1 (start), 1 (end), and T-1 (middle)
-int mergedPartitionLength[T]; // each thread will save its length here
+int* regularSamples; 		// each thread will save the local regular samples here
+int* pivots; 			// the selected pivots will be stored here
+int* partitions; 		// partition indices per thread (separated by the outer array index), and there is T+1 indices. 1 (start), 1 (end), and T-1 (middle)
+int* mergedPartitionLength; 	// each thread will save its length here
 
 void* psrs(void *args) {
 	struct thread_data* data = (struct thread_data*) args;
@@ -103,7 +106,7 @@ void* psrs(void *args) {
 
 	free(data); // data object is no longer needed
 	/* Phase 1 */
-	qsort((INPUT + start), (end - start), sizeof(int), cmpfunc);
+	qsort((INPUT + start), (end - start), ISIZE, cmpfunc);
 	
 	/* regular sampling */
 	int ix = 0;
@@ -116,35 +119,37 @@ void* psrs(void *args) {
 
 	/* Phase 2 */
 	MASTER { 
-		qsort(regularSamples, T*T, sizeof(int), cmpfunc);
+		qsort(regularSamples, T*T, ISIZE, cmpfunc);
 		ix = 0;
 		for (int i = 1; i < T; i++) {
 			int pos = T * i + RO - 1;
 			pivots[ix++] = regularSamples[pos];
 		}
+		free(regularSamples);
 	}
 	pthread_barrier_wait(&phase2Barrier);
 
 	/* Phase 3 */
 	int pi = 0; // pivot counter
 	int pc = 1; // partition counter
-	partitions[id][0] = start;
-	partitions[id][T] = end;
+	partitions[id*(T+1)+0] = start;
+	partitions[id*(T+1)+T] = end;
 	for (int i = start; i < end && pi != T-1; i++) {
 		if (pivots[pi] < INPUT[i]) {
-			partitions[id][pc++] = i;
+			partitions[id*(T+1) + pc] = i;
+			pc++;
 			pi++;
 		}
 	}
-	
 	pthread_barrier_wait(&phase3Barrier);
+	MASTER { free(pivots);}
 
 	/* Phase 4 */
 	int exchangeIndices[T*2];
-	int ei = 0;
+	int ei = 0; // exchange indices counter
 	for (int i = 0; i < T; i++) {
-		exchangeIndices[ei++] = partitions[i][id];
-		exchangeIndices[ei++] = partitions[i][id+1];
+		exchangeIndices[ei++] = partitions[i*(T+1) + id];
+		exchangeIndices[ei++] = partitions[i*(T+1) + id + 1];
 	}
 	// k way merge part
 	// printArray(exchangeIndices, 2* T);
@@ -154,7 +159,7 @@ void* psrs(void *args) {
 		mergedLength += exchangeIndices[i + 1] - exchangeIndices[i];
 	}
 	
-	int* mergedValues = malloc(sizeof(int) * mergedLength);
+	int* mergedValues = malloc(ISIZE * mergedLength);
 	mergedPartitionLength[id] = mergedLength;
 	int mi = 0; // mergedValues index
 	while (mi < mergedLength) {
@@ -187,10 +192,13 @@ void* psrs(void *args) {
 	for (int i = startPos; i < startPos + mergedLength; i++) {
 		INPUT[i] = mergedValues[i - startPos];
 	}
+	
 	free(mergedValues);
 	pthread_barrier_wait(&mergingPhaseBarrier);
 	
 	MASTER {
+		free(mergedPartitionLength);
+		free(partitions);
 		return NULL;
 	}
 	pthread_exit(0);
@@ -204,10 +212,27 @@ struct thread_data* getThreadData(int id, int perThread) {
 	return data;
 }
 
-int main(){
+// should be called as
+// PROGRAM size thread_count
+int main(int argc, char *argv[]){
+	if (argc != 3) {
+		fprintf(stderr, "3 arguments required\n");
+		exit(1);
+	} 
+
+	SIZE 	= atoi(argv[1]);
+	T 	= atoi(argv[2]);
+	W 	= (SIZE/(T*T));
+	RO 	= T / 2;
+	
 	printf("Size : %d\n", SIZE);
-	INPUT = generateArrayOfSize(SIZE);
-	// printArray(INPUT, SIZE);
+
+	INPUT 			= generateArrayOfSize(SIZE);
+	regularSamples 		= malloc(ISIZE *T*T); 
+	pivots 			= malloc(ISIZE * (T - 1));
+	mergedPartitionLength 	= malloc(ISIZE * T);
+	partitions 		= malloc(ISIZE *  T * (T+1));
+
 	int perThread = SIZE / T;
 	
 	pthread_barrier_init(&phase1Barrier, NULL, T);
@@ -216,7 +241,7 @@ int main(){
 	pthread_barrier_init(&phase4Barrier, NULL, T);
 	pthread_barrier_init(&mergingPhaseBarrier, NULL, T);
 	
-	pthread_t THREADS[T];
+	pthread_t* THREADS = malloc(sizeof(pthread_t) * T);
 
 	struct timeval start;
 	gettimeofday(&start, NULL);
@@ -226,7 +251,6 @@ int main(){
 		struct thread_data* data = getThreadData(i, perThread);
 		pthread_create(&THREADS[i], NULL, psrs, (void *) data);
 	}
-
 	
 	struct thread_data* data = getThreadData(i, perThread);
 	data->end = SIZE;
@@ -246,6 +270,13 @@ int main(){
 
 	// printArray(INPUT, SIZE);
 	isSorted();
+	
 	free(INPUT);
+	free(THREADS);
+	pthread_barrier_destroy(&phase1Barrier);
+	pthread_barrier_destroy(&phase2Barrier);
+	pthread_barrier_destroy(&phase3Barrier);
+	pthread_barrier_destroy(&phase4Barrier);
+	pthread_barrier_destroy(&mergingPhaseBarrier);
 	return 0;
 }

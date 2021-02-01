@@ -1,9 +1,12 @@
 all:
-	gcc -Wall main.c -lpthread -o main
-	./main
-second:
-	gcc -Wall main2.c -lpthread -o main
-	./main
+	gcc -Wall -O main2.c -lpthread -o main
+	./main $(args)
+compile:
+	gcc -Wall -O main2.c -lpthread -o main
+cd:
+	gcc -Wall -g main2.c -lpthread -o main
+run: 
+	./main $(args)
 debug:
 	gcc -Wall -g main2.c -lpthread -o main
 	gdb ./main
