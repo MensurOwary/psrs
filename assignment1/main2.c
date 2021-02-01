@@ -6,7 +6,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define SIZE 1000000 
+#define SIZE 128000000 
 #define T 4
 #define W (SIZE/(T*T))
 #define RO (T/2)
@@ -37,6 +37,7 @@ void isSorted() {
 	for (int i = 0; i < SIZE - 1; i++) {
 		if (INPUT[i] > INPUT[i+1]) {
 			flag = 0;
+			printf("Not sorted: %d > %d\n", INPUT[i], INPUT[i+1]);
 			break;	
 		}
 	}
@@ -99,6 +100,7 @@ void* psrs(void *args) {
 	int id = data->id;
 	int start = data->start;
 	int end = data->end;
+
 	free(data); // data object is no longer needed
 	/* Phase 1 */
 	qsort((INPUT + start), (end - start), sizeof(int), cmpfunc);
@@ -154,10 +156,10 @@ void* psrs(void *args) {
 	
 	int* mergedValues = malloc(sizeof(int) * mergedLength);
 	mergedPartitionLength[id] = mergedLength;
-	int mi = 0;
+	int mi = 0; // mergedValues index
 	while (mi < mergedLength) {
 		// find minimum among current items
-		int* minAndPos = findInitialMin(exchangeIndices, T * 2);// INT_MAX;
+		int* minAndPos = findInitialMin(exchangeIndices, T * 2);
 		if (minAndPos == NULL) break;
 		int min = minAndPos[0];
 		int minPos = minAndPos[1];
@@ -205,6 +207,7 @@ struct thread_data* getThreadData(int id, int perThread) {
 int main(){
 	printf("Size : %d\n", SIZE);
 	INPUT = generateArrayOfSize(SIZE);
+	// printArray(INPUT, SIZE);
 	int perThread = SIZE / T;
 	
 	pthread_barrier_init(&phase1Barrier, NULL, T);
@@ -217,14 +220,20 @@ int main(){
 
 	struct timeval start;
 	gettimeofday(&start, NULL);
-
-	for (int i = 1; i < T; i++) {
+	
+	int i = 1;
+	for (i = 1; i < T - 1; i++) {
 		struct thread_data* data = getThreadData(i, perThread);
 		pthread_create(&THREADS[i], NULL, psrs, (void *) data);
 	}
+
 	
-	struct thread_data* data = getThreadData(0, perThread);
-	psrs((void *) data);
+	struct thread_data* data = getThreadData(i, perThread);
+	data->end = SIZE;
+	pthread_create(&THREADS[i], NULL, psrs, (void *) data);
+	
+	struct thread_data* data2 = getThreadData(0, perThread);
+	psrs((void *) data2);
 	
 	printf("Threads finished\n");
 	
