@@ -1,0 +1,11 @@
+Size : 256000000
+Thread 0 - Phase 1 took 20236090 ms, sorted 128000000 items
+Thread 1 - Phase 1 took 20293248 ms, sorted 128000000 items
+Thread 0 - Phase 2 took 1 ms
+Thread 1 - Phase 3 took 56576 ms
+Thread 0 - Phase 3 took 64019 ms
+Thread 0 - Phase 4 took 2669402 ms, merged 127990286 keys
+Thread 1 - Phase 4 took 2664361 ms, merged 128009714 keys
+Thread 0 - Phase Merge took 293890 ms
+Thread 1 - Phase Merge took 297561 ms
+Took: 23346817 mics

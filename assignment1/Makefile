@@ -12,3 +12,6 @@ debug:
 	gdb ./main
 gprof:
 	gcc -Wall -pg main.c -lpthread -o main
+clean:
+	rm main 
+	rm -rf ./data/out*
