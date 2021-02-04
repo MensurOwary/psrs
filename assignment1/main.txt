@@ -1,4 +1,0 @@
-Size : 1000000
-Threads finished
-It took 429835 mics
-Sorted

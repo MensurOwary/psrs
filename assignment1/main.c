@@ -8,6 +8,7 @@
 
 #define MASTER if (id == 0) 
 #define ISIZE sizeof(int)
+#define BARRIER pthread_barrier_wait(&barrier)
 
 int SIZE; 
 int T;
@@ -27,11 +28,7 @@ struct thread_data {
 	int end;
 };
 
-pthread_barrier_t phase1Barrier;
-pthread_barrier_t phase2Barrier;
-pthread_barrier_t phase3Barrier;
-pthread_barrier_t phase4Barrier;
-pthread_barrier_t mergingPhaseBarrier;
+pthread_barrier_t barrier;
 
 int cmpfunc(const void* a, const void* b);
 void isSorted();
@@ -40,21 +37,10 @@ long int endTiming(struct timeval* start);
 int* generateArrayOfSize(int size);
 void printArray(int* array, int size);
 
-
-// given the exchangeIndices, it returns the value and index of the first valid values.
-int* findInitialMin(int * exchangeIndices, int size) {
-	for (int i = 0; i < size; i += 2) {
-		if (exchangeIndices[i] != exchangeIndices[i+1]) {
-			int* minAndPos = malloc(ISIZE * 2);
-			minAndPos[0] = INPUT[exchangeIndices[i]];
-			minAndPos[1] = i;
-			return minAndPos;
-		}
-	}
-	return NULL;
-}
-
-
+/*
+ * Phase 1
+ * Does the local sorting of the array, and collects sample.
+ */
 void phase1(struct thread_data* data) {
 	struct timeval* timeStart = getTime();
 	
@@ -75,6 +61,10 @@ void phase1(struct thread_data* data) {
 	printf("Thread %d - Phase 1 took %ld ms, sorted %d items\n", id, time, (end - start));	
 }
 
+/*
+ * Phase 2
+ * Sequential part of the algorithm. Determines pivots based on the regular samples provided.
+ */
 void phase2(struct thread_data* data) {	
 	int id = data->id;
 	MASTER { 
@@ -93,6 +83,10 @@ void phase2(struct thread_data* data) {
 	
 }
 
+/*
+ * Phase 3
+ * Local splitting of the data based on the pivots
+ */
 void phase3(struct thread_data* data) {
 	struct timeval* timeStart = getTime();
 
@@ -116,6 +110,59 @@ void phase3(struct thread_data* data) {
 	printf("Thread %d - Phase 3 took %ld ms\n", id, time);
 }
 
+/* 
+ * Given the exchangeIndices, it returns the value and index of the first valid value.
+ * 
+ * Explanation: exchangeIndices is an array of the form [s1, e1, s2, e2...] where 
+ * si represents the start of a range, and ei represents the end of that range.
+ * 
+ * A valid value means any si where si != ei
+ * It is used for merging k sorted arrays, and this method finds the first valid value, 
+ * so that it can be used as an initial minimum (as opposed to using INT_MAX)
+ * 
+ * returns: an array of 2 elements [minumum value, its position] 
+ */
+int* findInitialMin(int * exchangeIndices, int size) {
+	for (int i = 0; i < size; i += 2) {
+		if (exchangeIndices[i] != exchangeIndices[i+1]) {
+			int* minAndPos = malloc(ISIZE * 2);
+			minAndPos[0] = INPUT[exchangeIndices[i]];
+			minAndPos[1] = i;
+			return minAndPos;
+		}
+	}
+	return NULL;
+}
+
+/*
+ * Merges the array with a given size into the original INPUT array
+ */
+void mergeIntoOriginalArray(int id, int* array, int arraySize) {
+	struct timeval* mergeStart = getTime();
+
+	// find the position that the thread needs to start from
+	// in order to put values into the original array
+	// start position is basically the summation of 
+	// the lengths of the previous partitions
+	int startPos = 0;
+	int x = id - 1;
+	while (x >= 0) {
+		startPos += mergedPartitionLength[x--];
+	}
+	for (int i = startPos; i < startPos + arraySize; i++) {
+		INPUT[i] = array[i - startPos];
+	}
+	long int time = endTiming(mergeStart);
+	printf("Thread %d - Phase Merge took %ld ms\n", id, time);	
+	free(array);
+}
+
+/*
+ * Phase 4
+ * 
+ * Merges the received partitions from other threads, and performs a k way merge
+ * It also saves the merged values into their appropriate place in the INPUT array.
+ */
 void phase4(struct thread_data* data) {
 	struct timeval* start = getTime();
 
@@ -127,17 +174,17 @@ void phase4(struct thread_data* data) {
 		exchangeIndices[ei++] = partitions[i*(T+1) + id];
 		exchangeIndices[ei++] = partitions[i*(T+1) + id + 1];
 	}
-	// k way merge part
+	// k way merge - start
 	// array size
-	int mergedLength = 0;
+	int totalMergeLength = 0;
 	for (int i = 0; i < T * 2; i+=2) {
-		mergedLength += exchangeIndices[i + 1] - exchangeIndices[i];
+		totalMergeLength += exchangeIndices[i + 1] - exchangeIndices[i];
 	}
 	
-	int* mergedValues = malloc(ISIZE * mergedLength);
-	mergedPartitionLength[id] = mergedLength;
+	int* mergedValues = malloc(ISIZE * totalMergeLength);
+	mergedPartitionLength[id] = totalMergeLength;
 	int mi = 0; // mergedValues index
-	while (mi < mergedLength) {
+	while (mi < totalMergeLength) {
 		// find minimum among current items
 		int* minAndPos = findInitialMin(exchangeIndices, T * 2);
 		if (minAndPos == NULL) break;
@@ -157,24 +204,13 @@ void phase4(struct thread_data* data) {
 		mergedValues[mi++] = min;
 		exchangeIndices[minPos]++;
 	}
+	// k way merge - end
 	long int time = endTiming(start);
-	pthread_barrier_wait(&phase4Barrier);
+	BARRIER;
 	
-	printf("Thread %d - Phase 4 took %ld ms, merged %d keys\n", id, time, mergedLength);
+	printf("Thread %d - Phase 4 took %ld ms, merged %d keys\n", id, time, totalMergeLength);
 	
-	struct timeval* mergeStart = getTime();
-
-	int startPos = 0;
-	int x = id - 1;
-	while (x >= 0) {
-		startPos += mergedPartitionLength[x--];
-	}
-	for (int i = startPos; i < startPos + mergedLength; i++) {
-		INPUT[i] = mergedValues[i - startPos];
-	}
-	time = endTiming(mergeStart);
-	printf("Thread %d - Phase Merge took %ld ms\n", id, time);	
-	free(mergedValues);
+	mergeIntoOriginalArray(id, mergedValues, totalMergeLength);
 }
 
 void* psrs(void *args) {
@@ -183,19 +219,19 @@ void* psrs(void *args) {
 
 	/* Phase 1 */
 	phase1(data);
-	pthread_barrier_wait(&phase1Barrier);
+	BARRIER;
 
 	/* Phase 2 */
 	phase2(data);
-	pthread_barrier_wait(&phase2Barrier);
+	BARRIER;
 
 	/* Phase 3 */
 	phase3(data);
-	pthread_barrier_wait(&phase3Barrier);
+	BARRIER;
 
 	/* Phase 4 */
 	phase4(data);
-	pthread_barrier_wait(&mergingPhaseBarrier);
+	BARRIER;
 
 	free(data);	
 	
@@ -237,11 +273,7 @@ int main(int argc, char *argv[]){
 
 	int perThread = SIZE / T;
 	
-	pthread_barrier_init(&phase1Barrier, NULL, T);
-	pthread_barrier_init(&phase2Barrier, NULL, T);
-	pthread_barrier_init(&phase3Barrier, NULL, T);
-	pthread_barrier_init(&phase4Barrier, NULL, T);
-	pthread_barrier_init(&mergingPhaseBarrier, NULL, T);
+	pthread_barrier_init(&barrier, NULL, T);
 	
 	pthread_t* THREADS = malloc(sizeof(pthread_t) * T);
 
@@ -263,6 +295,8 @@ int main(int argc, char *argv[]){
 
 	printf("Took: %ld mics\n", time);
 	
+ 	isSorted();	
+
 	free(regularSamples);
 	free(mergedPartitionLength);
 	free(partitions);
@@ -270,31 +304,20 @@ int main(int argc, char *argv[]){
 	free(INPUT);
 	free(THREADS);
 	
-	pthread_barrier_destroy(&phase1Barrier);
-	pthread_barrier_destroy(&phase2Barrier);
-	pthread_barrier_destroy(&phase3Barrier);
-	pthread_barrier_destroy(&phase4Barrier);
-	pthread_barrier_destroy(&mergingPhaseBarrier);
-	
+	pthread_barrier_destroy(&barrier);
 	return 0;
 }
 
 // checks if the INPUT array is sorted
-// used for debugging reasons
+// used for debugging and validation reasons
 void isSorted() {
-	int flag = 1;
 	for (int i = 0; i < SIZE - 1; i++) {
 		if (INPUT[i] > INPUT[i+1]) {
-			flag = 0;
 			printf("Not sorted: %d > %d\n", INPUT[i], INPUT[i+1]);
-			break;	
+			return;	
 		}
 	}
-	if (flag) {
-		printf("Sorted\n");
-	} else {
-		printf("Not sorted\n");
-	}
+	printf("Sorted\n");
 }
 
 struct timeval* getTime() {
@@ -328,7 +351,6 @@ void printArray(int* array, int size) {
 	printf("\n");
 }
 
-
-int cmpfunc (const void * a, const void * b) {
-	return ( *(int *) a - *(int*)b );
-}
+// Reference: https://stackoverflow.com/a/27284318/9985287
+// integer compare function
+int cmpfunc (const void * a, const void * b) { return ( *(int *) a - *(int*)b );}

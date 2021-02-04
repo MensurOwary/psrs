@@ -1,17 +1,14 @@
+CC=gcc
+TARGET=main.o
+CFLAGS=-Wall -O
+LFLAGS=-lpthread
+
 all:
-	gcc -Wall -O main.c -lpthread -o main
+	$(CC) $(CFLAGS) main.c $(LFLAGS) -o $(TARGET)
 	./main $(args)
 compile:
-	gcc -Wall -O main.c -lpthread -o main
-cd:
-	gcc -Wall -g main.c -lpthread -o main
+	$(CC) $(CFLAGS) main.c $(LFLAGS) -o $(TARGET)
 run: 
 	./main $(args)
-debug:
-	gcc -Wall -g main.c -lpthread -o main
-	gdb ./main
-gprof:
-	gcc -Wall -pg main.c -lpthread -o main
 clean:
-	rm main 
-	rm -rf ./data/out*
+	rm *.o 
