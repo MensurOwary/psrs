@@ -2,13 +2,14 @@ CC=gcc
 TARGET=main.o
 CFLAGS=-Wall -O
 LFLAGS=-lpthread
+SOURCES=main.c
 
 all:
-	$(CC) $(CFLAGS) main.c $(LFLAGS) -o $(TARGET)
-	./main $(args)
+	$(CC) $(CFLAGS) $(SOURCES) $(LFLAGS) -o $(TARGET)
+	./$(TARGET) $(args)
 compile:
-	$(CC) $(CFLAGS) main.c $(LFLAGS) -o $(TARGET)
+	$(CC) $(CFLAGS) $(SOURCES) $(LFLAGS) -o $(TARGET)
 run: 
-	./main $(args)
+	./$(TARGET) $(args)
 clean:
-	rm *.o 
+	rm $(TARGET) 

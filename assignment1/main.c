@@ -105,6 +105,7 @@ void phase3(struct thread_data* data) {
 			pi++;
 		}
 	}
+
 	
 	long int time = endTiming(timeStart);
 	printf("Thread %d - Phase 3 took %ld ms\n", id, time);
@@ -166,6 +167,8 @@ void mergeIntoOriginalArray(int id, int* array, int arraySize) {
 void phase4(struct thread_data* data) {
 	struct timeval* start = getTime();
 
+	// this array contains the range indicating pairs
+	// [r1_start, r1_end, r2_start, r2_end, ...]
 	int exchangeIndices[T*2];
 	int id = data->id;
 
@@ -175,6 +178,10 @@ void phase4(struct thread_data* data) {
 		exchangeIndices[ei++] = partitions[i*(T+1) + id + 1];
 	}
 	// k way merge - start
+	// in k-way merge step, basically we go through each valid partition, and find the minimum in each step
+	// then we add that minimum to the local "mergedValues" array in each step
+	// a valid partition is when rn_start < rn_end
+	// partition being invalid means that that partition has been merged completely already
 	// array size
 	int totalMergeLength = 0;
 	for (int i = 0; i < T * 2; i+=2) {
@@ -184,29 +191,39 @@ void phase4(struct thread_data* data) {
 	int* mergedValues = malloc(ISIZE * totalMergeLength);
 	mergedPartitionLength[id] = totalMergeLength;
 	int mi = 0; // mergedValues index
+	// do it until we have reached the amount that we have to merge
 	while (mi < totalMergeLength) {
-		// find minimum among current items
+		// find initial minimum among current items
+		// alternative would be going with INT_MAX initially
 		int* minAndPos = findInitialMin(exchangeIndices, T * 2);
 		if (minAndPos == NULL) break;
+		// get the minimum value
 		int min = minAndPos[0];
+		// and which position that value is in
+		// so that we can increase the counter if it is indeed the minimum
 		int minPos = minAndPos[1];
 		free(minAndPos);
 		
 		for (int i = 0; i < T * 2; i+=2) {
 			if (exchangeIndices[i] != exchangeIndices[i+1]) {
 				int ix = exchangeIndices[i];
+				// update the variables when we see a new minimum
 				if (INPUT[ix] < min) {
 					min = INPUT[ix];
 					minPos = i;
 				}
 			}
 		}
+		// save the minimum to the final array
 		mergedValues[mi++] = min;
+		// increase the counter of the range that 
+		// the minimum value belongs to
 		exchangeIndices[minPos]++;
 	}
 	// k way merge - end
 	long int time = endTiming(start);
 	BARRIER;
+	MASTER { free(partitions); }
 	
 	printf("Thread %d - Phase 4 took %ld ms, merged %d keys\n", id, time, totalMergeLength);
 	
@@ -224,14 +241,17 @@ void* psrs(void *args) {
 	/* Phase 2 */
 	phase2(data);
 	BARRIER;
+	MASTER { free(regularSamples); }
 
 	/* Phase 3 */
 	phase3(data);
 	BARRIER;
-
+	MASTER { free(pivots); }
+	
 	/* Phase 4 */
 	phase4(data);
 	BARRIER;
+	MASTER { free(mergedPartitionLength); }
 
 	free(data);	
 	
@@ -254,7 +274,7 @@ struct thread_data* getThreadData(int id, int perThread) {
 // PROGRAM size thread_count
 int main(int argc, char *argv[]){
 	if (argc != 3) {
-		fprintf(stderr, "3 arguments required\n");
+		fprintf(stderr, "2 arguments required - <SIZE> <THREAD_COUNT>\n");
 		exit(1);
 	} 
 
@@ -263,7 +283,7 @@ int main(int argc, char *argv[]){
 	W 	= (SIZE/(T*T));
 	RO 	= T / 2;
 	
-	printf("Size : %d\n", SIZE);
+	printf("SIZE: %d\n", SIZE);
 
 	INPUT 			= generateArrayOfSize(SIZE);
 	regularSamples 		= malloc(ISIZE *T*T); 
@@ -293,18 +313,14 @@ int main(int argc, char *argv[]){
 	
 	long int time = endTiming(start);
 
-	printf("Took: %ld mics\n", time);
+	printf("Took: %ld ms (microseconds)\n", time);
 	
- 	isSorted();	
+ 	isSorted(); // for validation to see if the array has really been sorted
 
-	free(regularSamples);
-	free(mergedPartitionLength);
-	free(partitions);
-	free(pivots);
 	free(INPUT);
-	free(THREADS);
-	
+	free(THREADS);	
 	pthread_barrier_destroy(&barrier);
+
 	return 0;
 }
 
