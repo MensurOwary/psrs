@@ -9,6 +9,8 @@
 #define MASTER if (id == 0) 
 #define ISIZE sizeof(int)
 #define BARRIER pthread_barrier_wait(&barrier)
+#define START_TIME struct timeval* timeStart = getTime();
+#define END_TIME endTiming(timeStart);
 
 int SIZE; 
 int T;
@@ -17,10 +19,34 @@ int RO;
 
 int* INPUT;
 
-int* regularSamples; 		// each thread will save the local regular samples here
-int* pivots; 			// the selected pivots will be stored here
-int* partitions; 		// partition indices per thread (separated by the outer array index), and there is T+1 indices. 1 (start), 1 (end), and T-1 (middle)
-int* mergedPartitionLength; 	// each thread will save its length here
+/*
+ * regularSamples is an array of T*T elements where each thread writes 
+ * local samples to their own parts (disjoint) of the array.
+ *
+ * Gets generated in Phase 1, and used in Phase 2
+ */
+int* regularSamples;
+/*
+ * pivots is an array of T - 1 elements, and is written to only once by the master thread, 
+ * and afterwards is accessed in read-only fashion by the worker threads. 
+ *
+ * It stores pivots in Phase 2
+ */
+int* pivots;
+/*
+ * partitions is an array of size T * (T + 1). 
+ * It can be considered as a 2D array where each thread writes the partition indices to its own row. 
+ * There are T - 1 partition points for each chunk, 
+ * and adding start and end indices makes the size T + 1. 
+ *
+ * Gets generated in Phase 3
+ */
+int* partitions;
+/*
+ * mergedPartitionLength is an array of size T which contains 
+ * the length of total merged keys per thread in Phase 4.
+ */
+int* mergedPartitionLength;
 
 struct thread_data {
 	int id;
@@ -42,8 +68,8 @@ void printArray(int* array, int size);
  * Does the local sorting of the array, and collects sample.
  */
 void phase1(struct thread_data* data) {
-	struct timeval* timeStart = getTime();
-	
+	START_TIME;
+
 	int start = data->start;
 	int end = data->end;
 	int id = data->id;
@@ -57,7 +83,7 @@ void phase1(struct thread_data* data) {
 		ix++;
 	}
 	
-	long int time = endTiming(timeStart);
+	long int time = END_TIME;
 	printf("Thread %d - Phase 1 took %ld ms, sorted %d items\n", id, time, (end - start));	
 }
 
@@ -68,8 +94,8 @@ void phase1(struct thread_data* data) {
 void phase2(struct thread_data* data) {	
 	int id = data->id;
 	MASTER { 
-		struct timeval* start = getTime();
-		
+		START_TIME;
+	
 		qsort(regularSamples, T*T, ISIZE, cmpfunc);
 		int ix = 0;
 		for (int i = 1; i < T; i++) {
@@ -77,7 +103,7 @@ void phase2(struct thread_data* data) {
 			pivots[ix++] = regularSamples[pos];
 		}
 		
-		long int time = endTiming(start);
+		long int time = END_TIME;
 		printf("Thread %d - Phase 2 took %ld ms\n", id, time);
 	}
 	
@@ -88,7 +114,7 @@ void phase2(struct thread_data* data) {
  * Local splitting of the data based on the pivots
  */
 void phase3(struct thread_data* data) {
-	struct timeval* timeStart = getTime();
+	START_TIME;
 
 	int start = data->start;
 	int end = data->end;
@@ -107,7 +133,7 @@ void phase3(struct thread_data* data) {
 	}
 
 	
-	long int time = endTiming(timeStart);
+	long int time = END_TIME;
 	printf("Thread %d - Phase 3 took %ld ms\n", id, time);
 }
 
@@ -139,7 +165,7 @@ int* findInitialMin(int * exchangeIndices, int size) {
  * Merges the array with a given size into the original INPUT array
  */
 void mergeIntoOriginalArray(int id, int* array, int arraySize) {
-	struct timeval* mergeStart = getTime();
+	START_TIME;
 
 	// find the position that the thread needs to start from
 	// in order to put values into the original array
@@ -153,7 +179,7 @@ void mergeIntoOriginalArray(int id, int* array, int arraySize) {
 	for (int i = startPos; i < startPos + arraySize; i++) {
 		INPUT[i] = array[i - startPos];
 	}
-	long int time = endTiming(mergeStart);
+	long int time = END_TIME;
 	printf("Thread %d - Phase Merge took %ld ms\n", id, time);	
 	free(array);
 }
@@ -165,8 +191,8 @@ void mergeIntoOriginalArray(int id, int* array, int arraySize) {
  * It also saves the merged values into their appropriate place in the INPUT array.
  */
 void phase4(struct thread_data* data) {
-	struct timeval* start = getTime();
-
+	START_TIME;
+	
 	// this array contains the range indicating pairs
 	// [r1_start, r1_end, r2_start, r2_end, ...]
 	int exchangeIndices[T*2];
@@ -221,7 +247,7 @@ void phase4(struct thread_data* data) {
 		exchangeIndices[minPos]++;
 	}
 	// k way merge - end
-	long int time = endTiming(start);
+	long int time = END_TIME;
 	BARRIER;
 	MASTER { free(partitions); }
 	
@@ -270,34 +296,35 @@ struct thread_data* getThreadData(int id, int perThread) {
 }
 
 
-// should be called as
-// PROGRAM size thread_count
 int main(int argc, char *argv[]){
 	if (argc != 3) {
 		fprintf(stderr, "2 arguments required - <SIZE> <THREAD_COUNT>\n");
 		exit(1);
 	} 
-
+	
+	// initializing parameters
 	SIZE 	= atoi(argv[1]);
 	T 	= atoi(argv[2]);
 	W 	= (SIZE/(T*T));
 	RO 	= T / 2;
 	
 	printf("SIZE: %d\n", SIZE);
-
+	
+	// initializing/allocating data
 	INPUT 			= generateArrayOfSize(SIZE);
 	regularSamples 		= malloc(ISIZE *T*T); 
 	pivots 			= malloc(ISIZE * (T - 1));
 	mergedPartitionLength 	= malloc(ISIZE * T);
 	partitions 		= malloc(ISIZE *  T * (T+1));
-
+	
+	// size of a chunk per thread
 	int perThread = SIZE / T;
 	
 	pthread_barrier_init(&barrier, NULL, T);
 	
 	pthread_t* THREADS = malloc(sizeof(pthread_t) * T);
 
-	struct timeval* start = getTime();
+	START_TIME;	
 	
 	int i = 1;
 	for (i = 1; i < T - 1; i++) {
@@ -305,14 +332,13 @@ int main(int argc, char *argv[]){
 		pthread_create(&THREADS[i], NULL, psrs, (void *) data);
 	}
 	// the last thread gets the remaining part of the array
-	struct thread_data* data = getThreadData(i, perThread); data->end = SIZE;
+	struct thread_data* data = getThreadData(i, perThread); data->end = SIZE; // the last thread will get the remaining chunk
 	pthread_create(&THREADS[i], NULL, psrs, (void *) data);
 	// master thread
 	struct thread_data* dataMaster = getThreadData(0, perThread);
 	psrs((void *) dataMaster);
 	
-	long int time = endTiming(start);
-
+	long int time = END_TIME;
 	printf("Took: %ld ms (microseconds)\n", time);
 	
  	isSorted(); // for validation to see if the array has really been sorted
