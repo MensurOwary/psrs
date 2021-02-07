@@ -36,8 +36,8 @@ int* generateArrayOfSize(int size);
 
 // should be called as
 // PROGRAM size thread_count
-int main(){
-	SIZE 	=  512000000;
+int main(int c, char* args[]){
+	SIZE 	=  atoi(args[1]);
 	INPUT 			= generateArrayOfSize(SIZE);
 	struct timeval* start = getTime();
 	qsort(INPUT, SIZE, ISIZE, cmpfunc);

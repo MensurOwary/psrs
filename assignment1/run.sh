@@ -2,7 +2,7 @@
 
 KEYS=( 16000000 32000000 64000000 128000000 256000000 512000000 )
 
-mkdir -p data
+mkdir -p data2
 
 make compile
 
@@ -13,7 +13,7 @@ do
 		for time in {1..5}
 		do
 			echo "Running ${thread_count} : ${size} - $time time"
-			./main $size $thread_count > ./data/out"$thread_count-$size-$time".txt
+			./main.o $size $thread_count > ./data2/out"$thread_count-$size-$time".txt
 		done
 	done
 done

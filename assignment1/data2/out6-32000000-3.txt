@@ -1,0 +1,28 @@
+SIZE: 32000000
+Thread 0 - Phase 1 took 736370 ms, sorted 5333333 items
+Thread 2 - Phase 1 took 754904 ms, sorted 5333333 items
+Thread 5 - Phase 1 took 756183 ms, sorted 5333335 items
+Thread 4 - Phase 1 took 758202 ms, sorted 5333333 items
+Thread 3 - Phase 1 took 759379 ms, sorted 5333333 items
+Thread 1 - Phase 1 took 760363 ms, sorted 5333333 items
+Thread 0 - Phase 2 took 3 ms
+Thread 3 - Phase 3 took 4597 ms
+Thread 1 - Phase 3 took 4584 ms
+Thread 0 - Phase 3 took 4661 ms
+Thread 4 - Phase 3 took 4509 ms
+Thread 2 - Phase 3 took 4659 ms
+Thread 5 - Phase 3 took 4659 ms
+Thread 1 - Phase 4 took 148991 ms, merged 5332397 keys
+Thread 3 - Phase 4 took 149293 ms, merged 5331260 keys
+Thread 0 - Phase 4 took 155477 ms, merged 5331896 keys
+Thread 5 - Phase 4 took 149140 ms, merged 5334693 keys
+Thread 4 - Phase 4 took 149281 ms, merged 5334166 keys
+Thread 2 - Phase 4 took 149947 ms, merged 5335588 keys
+Thread 2 - Phase Merge took 10596 ms
+Thread 4 - Phase Merge took 11224 ms
+Thread 3 - Phase Merge took 12373 ms
+Thread 1 - Phase Merge took 12962 ms
+Thread 0 - Phase Merge took 13572 ms
+Thread 5 - Phase Merge took 13590 ms
+Took: 936139 ms (microseconds)
+Sorted
