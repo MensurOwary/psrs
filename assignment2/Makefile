@@ -1,12 +1,13 @@
 all: 
-	mpicc -o main main.c
+	mpicc -o a.out main.c
 
 run: 
-	mpirun -n 2 -f hosts ./main
+	mpirun -n 2 -f hosts ./a.out
 
 push:
 	git add -A
 	git commit -m "Sync"
 	git push
 pull:
+	rm a.out
 	git pull
