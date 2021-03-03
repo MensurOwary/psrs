@@ -72,6 +72,7 @@ int main() {
 	} else {
 		MPI_Send(localRegularSamples, T, MPI_INT, 0, 0, MPI_COMM_WORLD); 
 	}
+	printf("%d) Phase 2 sending samples done\n", rank);
 	// Phase 2: Sorting and picking pivots
 	int* pivots = malloc(sizeof(int) * (T - 1));
 	if (rank == 0) {
@@ -84,6 +85,7 @@ int main() {
 		printArray(pivots, T - 1);
 		MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 	} else {
+		printf("%d) Waiting to receive\n", rank);
 		MPI_Recv(pivots, T - 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		printf("Received pivots: ");
 		printArray(pivots, T - 1);
