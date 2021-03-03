@@ -46,7 +46,11 @@ int main() {
 		memcpy(partition, DATA, sizeof(int) * perProcessor);
 		for (int i = 1; i < T; i++) {
 			int* start = DATA + (i * perProcessor);
-			MPI_Send(start, perProcessor, MPI_INT, i, 0, MPI_COMM_WORLD);
+			int partitionSize = perProcessor;
+			if (rank == T - 1) {
+				partitionSize = SIZE - (T - 1) * perProcessor;
+			}
+			MPI_Send(start, partitionSize, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 	} else {
 		MPI_Recv(partition, perProcessor, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -83,8 +87,33 @@ int main() {
 		}
 	}
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
-	printArray(pivots, T - 1);
 	// Phase 3:
+	int partitionSize = rank == T - 1 ? (SIZE - (T - 1) * perProcessor) : perProcessor; 
+	int* splitters = malloc(sizeof(int) * (T - 1 + 2));
+	splitters[0] = 0;
+	splitters[T] = partitionSize;
+	for (int i = 0, pc = 1, pi = 0; i < partitionSize; i++) {
+		if (pivots[pi] < partition[i]) {
+			splitters[pc] = i;
+			pc++; pi++;
+		}
+	}
+	
+	int* lengths = malloc(sizeof(int) * T);
+	for (int i = 0; i < T; i++) {
+		int start = splitters[i];
+		int end = splitters[i + 1];
+		if (rank != i) {
+			MPI_Send((end-start), 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+			MPI_Send(partitions + start, (end - start), MPI_INT, i, 0, MPI_COMM_WORLD); 
+		} else {
+			MPI_Status status;
+			MPI_Recv(partitionSize, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status);
+			int source = status->MPI_SOURCE;
+			lengths[i]
+		}
+	}
+ 
 	// Phase 4:
 
 	MPI_Finalize();
