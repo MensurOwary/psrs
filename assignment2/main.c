@@ -13,8 +13,12 @@ int* generateArrayDefault() {
 	return randoms;
 }
 
+int cmpfunc (const void * a, const void * b) { return ( *(int *) a - *(int*)b );}
+
 int main() {
+	// generate data
 	int* DATA = generateArrayDefault();
+	int SIZE = 36;
 
 	MPI_Init(NULL, NULL);
 	
@@ -22,13 +26,17 @@ int main() {
 	int T;
 	MPI_Comm_size(MPI_COMM_WORLD, &T);
 	
-	// what's my order?
+	int perProcessor = SIZE / T;
+
+	int W = SIZE / (T * T);
+	int RO = T / 2; 
+	
+	// what's my rank?
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
-	// if I am the master
-	int* partition = malloc(sizeof(int) * (36/T));
-	int perProcessor = 36 / T;
+	// Phase 0: Data distribution
+	int* partition = malloc(sizeof(int) * perProcessor);
 	if (rank == 0) {
 		memcpy(partition, DATA, sizeof(int) * perProcessor);
 		for (int i = 1; i < T; i++) {
@@ -38,19 +46,36 @@ int main() {
 	} else {
 		MPI_Recv(partition, perProcessor, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
-	for (int i = 0; i < perProcessor; i++) {
-		printf("%d ", partition[i]);
-	}
-	printf("\n");
-	free(partition);
-
-	// name of the processor
-	char processorName[MPI_MAX_PROCESSOR_NAME];
-	int nameLen;
-	MPI_Get_processor_name(processorName, &nameLen);
-
-	printf("Hello from p %s, rank %d, total %d\n", 
-		processorName, rank, T); 
+	// Phase 1: Sorting local data
+	qsort(partition, perProcessor, sizeof(int), cmpfunc);
 	
+	// Phase 1: Regular sampling
+	/* regular sampling */
+	int ix = 0;
+	int* localRegularSamples = malloc(sizeof(int) * T);
+	for (int i = 0; i < T; i++) {
+		localRegularSamples[ix++] = partition[i * W];
+	}
+	// Phase 1: Sending samples to master
+	int* regularSamples = malloc(sizeof(int) * T * T);
+	if (rank == 0) {
+		for (int i = 1; i < T; i++) {
+			int* start = regularSamples + (i * T);
+			MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		}
+		memcpy(regularSamples, localRegularSamples, sizeof(int) * T); 
+	} else {
+		MPI_Send(localRegularSamples, T, MPI_INT, 0, 0, MPI_COMM_WORLD); 
+	}
+	// Phase 2:
+	if (rank == 0) {
+		for (int i = 0; i < T * T; i++) {
+			printf("%d ", regularSamples[i]);
+		}
+		printf("\n");
+	} 
+	// Phase 3:
+	// Phase 4:
+
 	MPI_Finalize();
 }
