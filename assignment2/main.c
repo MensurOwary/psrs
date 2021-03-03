@@ -81,15 +81,9 @@ int main() {
 			int pos = T * i + RO - 1;
 			pivots[ix++] = regularSamples[pos];
 		}
-		printf("Sending pivots: ");
-		printArray(pivots, T - 1);
-		MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
-	} else {
-		printf("%d) Waiting to receive\n", rank);
-		MPI_Recv(pivots, T - 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf("Received pivots: ");
-		printArray(pivots, T - 1);
 	}
+	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
+	printArray(pivots, T - 1);
 	// Phase 3:
 	// Phase 4:
 
