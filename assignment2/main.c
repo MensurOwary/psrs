@@ -15,6 +15,11 @@ int* generateArrayDefault() {
 
 int cmpfunc (const void * a, const void * b) { return ( *(int *) a - *(int*)b );}
 
+void printArray(int* a, int size) {
+	for (int i = 0; i < size; i++) printf("%d ", a[i]);
+	printf("\n");
+}
+
 int main() {
 	// generate data
 	int* DATA = generateArrayDefault();
@@ -56,7 +61,7 @@ int main() {
 	for (int i = 0; i < T; i++) {
 		localRegularSamples[ix++] = partition[i * W];
 	}
-	// Phase 1: Sending samples to master
+	// Phase 2: Sending samples to master
 	int* regularSamples = malloc(sizeof(int) * T * T);
 	if (rank == 0) {
 		for (int i = 1; i < T; i++) {
@@ -67,13 +72,22 @@ int main() {
 	} else {
 		MPI_Send(localRegularSamples, T, MPI_INT, 0, 0, MPI_COMM_WORLD); 
 	}
-	// Phase 2:
+	// Phase 2: Sorting and picking pivots
+	int* pivots = malloc(sizeof(int) * (T - 1));
 	if (rank == 0) {
-		for (int i = 0; i < T * T; i++) {
-			printf("%d ", regularSamples[i]);
+		qsort(regularSamples, T * T, sizeof(int), cmpfunc);
+		for (int i = 1, ix = 0; i < T; i++) {
+			int pos = T * i + RO - 1;
+			pivots[ix++] = regularSamples[pos];
 		}
-		printf("\n");
-	} 
+		printf("Sending pivots: ");
+		printArray(pivots, T - 1);
+		MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
+	} else {
+		MPI_Recv(pivots, T - 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		printf("Received pivots: ");
+		printArray(pivots, T - 1);
+	}
 	// Phase 3:
 	// Phase 4:
 
