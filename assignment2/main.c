@@ -30,7 +30,7 @@ int main() {
 	int* partition = malloc(sizeof(int) * (36/T));
 	int perProcessor = 36 / T;
 	if (rank == 0) {
-		memcpy(partition, DATA, perProcessor);
+		memcpy(partition, DATA, sizeof(int) * perProcessor);
 		for (int i = 1; i < T; i++) {
 			int* start = DATA + (i * perProcessor);
 			MPI_Send(start, perProcessor, MPI_INT, i, 0, MPI_COMM_WORLD);
