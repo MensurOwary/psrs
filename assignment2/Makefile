@@ -9,5 +9,5 @@ push:
 	git commit -m "Sync"
 	git push
 pull:
-	rm a.out
+	rm -f a.out
 	git pull
