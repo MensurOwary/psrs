@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int* generateArrayDefault() {
 	int arr[36] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
@@ -29,17 +30,18 @@ int main() {
 	int* partition = malloc(sizeof(int) * (36/T));
 	int perProcessor = 36 / T;
 	if (rank == 0) {
+		memcpy(partition, DATA, perProcessor);
 		for (int i = 1; i < T; i++) {
 			int* start = DATA + (i * perProcessor);
 			MPI_Send(start, perProcessor, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 	} else {
 		MPI_Recv(partition, perProcessor, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		for (int i = 0; i < perProcessor; i++) {
-			printf("%d ", partition[i]);
-		}
-		printf("\n");
 	}
+	for (int i = 0; i < perProcessor; i++) {
+		printf("%d ", partition[i]);
+	}
+	printf("\n");
 	free(partition);
 
 	// name of the processor
