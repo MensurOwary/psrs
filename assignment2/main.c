@@ -183,8 +183,8 @@ int main() {
 	indices[0] = 0;
 	indices[T * 2 - 1] = sum;
 	int localSum = 0;
-	for (int i = 1; i < T * 2 - 1; i+=2) {
-		localSum += lengths[i-1];
+	for (int i = 1, x = 0; i < T * 2 - 1; i+=2) {
+		localSum += lengths[x++];
 		indices[i] = localSum;
 		indices[i+1] = localSum;
 	}
@@ -196,7 +196,7 @@ int main() {
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
 		MASTER printf("Initial min: %d\n", min);
-		MASTER printArray(indices, T + 1);
+		MASTER printArray(indices, T * 2);
 		for (int i = 0; i < T * 2; i+=2) {
 			if (indices[i] != indices[i+1]) {
 				if (obtainedKeys[indices[i]] < min) {
