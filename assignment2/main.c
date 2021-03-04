@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	// Phase 0: Data distribution
-	int* partition = intAlloc(perProcessor);
 	int partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+	int* partition = intAlloc(partitionSize);
 	MASTER {
 		int* DATA = generateArrayDefault(SIZE);
 		memcpy(partition, DATA, bytes(perProcessor));
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 			send(start, partitionSize, i);
 		}
 	} SLAVE {
-		MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(partition, partitionSize, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
 	// Phase 1: Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
