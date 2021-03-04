@@ -24,7 +24,7 @@ void printArray(int* a, int size) {
 }
 
 int findInitialMinPos(int * indices, int size) {
-	for (int i = 0; i < size - 1; i++) {
+	for (int i = 0; i < size; i+=2) {
 		if (indices[i] != indices[i+1]) {
 			return i;
 		}
@@ -179,24 +179,25 @@ int main() {
 	MASTER printf("%d: Obtained %d keys: ", rank, sum);
 	MASTER printArray(obtainedKeys, sum);
 	// Phase 4:
-	int* indices = malloc(sizeof(int) * (T + 1));
+	int* indices = malloc(sizeof(int) * (T * 2));
 	indices[0] = 0;
-	indices[T] = sum;
+	indices[T * 2 - 1] = sum;
 	int localSum = 0;
-	for (int i = 1; i < T; i++) {
+	for (int i = 1; i < T * 2 - 1; i+=2) {
 		localSum += lengths[i-1];
 		indices[i] = localSum;
+		indices[i+1] = localSum;
 	}
 	
 	int* mergedArray = malloc(sizeof(int) * sum);
 	int mi = 0;
 	while (mi < sum) {
-		int pos = findInitialMinPos(indices, T + 1);
+		int pos = findInitialMinPos(indices, T * 2);
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
 		MASTER printf("Initial min: %d\n", min);
 		MASTER printArray(indices, T + 1);
-		for (int i = 0; i < T; i++) {
+		for (int i = 0; i < T * 2; i+=2) {
 			if (indices[i] != indices[i+1]) {
 				if (obtainedKeys[indices[i]] < min) {
 					min = obtainedKeys[indices[i]];
