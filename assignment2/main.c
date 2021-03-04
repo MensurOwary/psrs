@@ -221,6 +221,7 @@ int main() {
 			MPI_Recv(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			lengths[i] = length;
 		}
+		printArray(lengths, T);
 	} else {
 		MPI_Send(&sum, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 	}
