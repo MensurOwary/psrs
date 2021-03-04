@@ -176,8 +176,8 @@ int main() {
                         }
                 }
         }
-	MASTER printf("%d: Obtained %d keys: ", rank, sum);
-	MASTER printArray(obtainedKeys, sum);
+	DEBUG printf("%d: Obtained %d keys: ", rank, sum);
+	DEBUG printArray(obtainedKeys, sum);
 	// Phase 4:
 	int* indices = malloc(sizeof(int) * (T * 2));
 	indices[0] = 0;
