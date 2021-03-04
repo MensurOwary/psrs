@@ -144,13 +144,20 @@ int main() {
                         MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
                 } else {
                         for (int j = 0; j < T; j++) {
-                                if (rank == j) continue;
-				printf("%d: Waiting to receive len(%d) from %d\n", rank, lengths[j], j); 
+                                if (rank == j) {
+					sum = 0;
+					for (int k = 0; k < j; k++) sum += lengths[k];
+					memcpy(obtainedKeys + sum, partition + splitters[j], sizeof(int) * lengths[j]);
+					continue;
+				}
+				DEBUG printf("%d: Waiting to receive len(%d) from %d\n", rank, lengths[j], j); 
 				int* keysReceived = malloc(sizeof(int) * lengths[j]);
                                 MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				printf("%d: Finished waiting for len(%d) from %d: ", rank, lengths[j], j);
-				// printArray(keysReceived, lengths[j]);
-                                sum = 0;
+				
+				DEBUG printf("%d: Finished waiting for len(%d) from %d: ", rank, lengths[j], j);
+				DEBUG printArray(keysReceived, lengths[j]);
+                                
+				sum = 0;
         			for (int k = 0; k < j; k++) {
                 			sum += lengths[k];
         			}
@@ -159,7 +166,8 @@ int main() {
                         }
                 }
         }
-	DEBUG printArray(obtainedKeys, sum);
+	printf("%d Obtained keys: ", rank);
+	printArray(obtainedKeys, sum);
 	// Phase 4:
 
 	MPI_Finalize();
