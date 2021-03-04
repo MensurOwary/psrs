@@ -149,8 +149,8 @@ int main() {
 	for (int i = 0; i < T; i++) {
                 if (rank != i) {
                         int length = splitters[i + 1] - splitters[i];
-			printf("%d: Sending %d len to %d: ", rank, length, i);
-			printArray(partition + splitters[i], length);
+			DEBUG printf("%d: Sending %d len to %d: ", rank, length, i);
+			DEBUG printArray(partition + splitters[i], length);
                         MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
                 } else {
                         for (int j = 0; j < T; j++) {
