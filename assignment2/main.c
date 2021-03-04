@@ -72,8 +72,8 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	// Phase 0: Data distribution
-	int* partition = intAlloc(perProcessor);
 	int partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+	int* partition = intAlloc(partitionSize);
 	MASTER {
 		int* DATA = generateArrayDefault(SIZE);
 		memcpy(partition, DATA, bytes(perProcessor));
