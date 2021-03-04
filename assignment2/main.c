@@ -195,8 +195,8 @@ int main() {
 		int pos = findInitialMinPos(indices, T * 2);
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
-		MASTER printf("Initial min: %d\n", min);
-		MASTER printArray(indices, T * 2);
+		DEBUG printf("Initial min: %d\n", min);
+		DEBUG printArray(indices, T * 2);
 		for (int i = 0; i < T * 2; i+=2) {
 			if (indices[i] != indices[i+1]) {
 				if (obtainedKeys[indices[i]] < min) {
@@ -205,12 +205,12 @@ int main() {
 				}
 			}
 		}
-		MASTER printf("Min: %d\n", min);
+		DEBUG printf("Min: %d\n", min);
 		mergedArray[mi++] = min;
 		indices[pos]++;
 	}
-	MASTER printf("%d: Keys sorted: ", rank);
-	MASTER printArray(mergedArray, sum);
+	printf("%d: Keys sorted: ", rank);
+	printArray(mergedArray, sum);
 
 	MPI_Finalize();
 }
