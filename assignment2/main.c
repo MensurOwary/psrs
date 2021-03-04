@@ -102,7 +102,7 @@ int main() {
 	int* splitters = malloc(sizeof(int) * (T - 1 + 2));
 	splitters[0] = 0;
 	splitters[T] = partitionSize;
-	for (int i = 0, pc = 1, pi = 0; i < partitionSize; i++) {
+	for (int i = 0, pc = 1, pi = 0; i < partitionSize && pi != T - 1; i++) {
 		if (pivots[pi] < partition[i]) {
 			splitters[pc] = i;
 			pc++; pi++;
