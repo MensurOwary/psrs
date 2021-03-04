@@ -1,5 +1,5 @@
 all: 
-	mpicc -o a.out main.c
+	mpicc -O -o a.out main.c
 
 run: 
 	mpirun -n $(n) -f hosts ./a.out $(args)
