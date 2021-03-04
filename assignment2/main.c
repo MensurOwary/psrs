@@ -151,7 +151,7 @@ int main() {
 				printf("%d: Finished waiting for len(%d) from %d\n", rank, lengths[j], j);
                                 sum = 0;
         			for (int k = 0; k < j; k++) {
-                			sum += lengths[j];
+                			sum += lengths[k];
         			}
 				memcpy(obtainedKeys + sum, keysReceived, sizeof(int) * lengths[j]);
 				free(keysReceived);
