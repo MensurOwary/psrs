@@ -100,19 +100,24 @@ int main() {
 	}
 	
 	int* lengths = malloc(sizeof(int) * T);
+	lengths[rank] = splitters[rank + 1] - splitters[rank];
 	for (int i = 0; i < T; i++) {
 		int start = splitters[i];
 		int end = splitters[i + 1];
 		if (rank != i) {
-			MPI_Send((end-start), 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-			MPI_Send(partitions + start, (end - start), MPI_INT, i, 0, MPI_COMM_WORLD); 
+			int length = end - start;
+			MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+			// MPI_Send(partitions + start, (end - start), MPI_INT, i, 0, MPI_COMM_WORLD); 
 		} else {
-			MPI_Status status;
-			MPI_Recv(partitionSize, 1, MPI_INT, i, 0, MPI_COMM_WORLD, &status);
-			int source = status->MPI_SOURCE;
-			lengths[i]
+			MPI_Recv(&partitionSize, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			lengths[i] = partitionSize;
 		}
 	}
+	int sum = 0;
+	for (int i = 0; i < T; i++) {
+		sum += lengths[i];
+	}
+	printf("%d: phase 4 array size: %d\n", rank, sum);
  
 	// Phase 4:
 
