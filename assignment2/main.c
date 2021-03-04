@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG if (1 != 1)
+
 int* generateArrayDefault() {
 	int arr[36] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
 
@@ -46,7 +48,7 @@ int main() {
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
-	printf("%s with rank %d is up and ready to go!\n", processor_name, rank);
+	DEBUG printf("%s with rank %d is up and ready to go!\n", processor_name, rank);
 	// Phase 0: Data distribution
 	int* partition = malloc(sizeof(int) * perProcessor);
 	if (rank == 0) {
@@ -83,7 +85,7 @@ int main() {
 	} else {
 		MPI_Send(localRegularSamples, T, MPI_INT, 0, 0, MPI_COMM_WORLD); 
 	}
-	printf("%d) Phase 2 sending samples done\n", rank);
+	DEBUG printf("%d) Phase 2 sending samples done\n", rank);
 	// Phase 2: Sorting and picking pivots
 	int* pivots = malloc(sizeof(int) * (T - 1));
 	if (rank == 0) {
@@ -92,13 +94,13 @@ int main() {
 			int pos = T * i + RO - 1;
 			pivots[ix++] = regularSamples[pos];
 		}
-		printf("Pivots: ");
-		printArray(pivots, (T - 1));
+		DEBUG printf("Pivots: ");
+		DEBUG printArray(pivots, (T - 1));
 	}
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 	// Phase 3:
 	int partitionSize = rank == T - 1 ? (SIZE - (T - 1) * perProcessor) : perProcessor; 
-	printf("partition size for %d : %d\n", rank, partitionSize);
+	DEBUG printf("partition size for %d : %d\n", rank, partitionSize);
 	int* splitters = malloc(sizeof(int) * (T - 1 + 2));
 	splitters[0] = 0;
 	splitters[T] = partitionSize;
@@ -108,9 +110,9 @@ int main() {
 			pc++; pi++;
 		}
 	}
-	printf("%d: ", rank);
-	printArray(splitters, (T - 1 + 2));
-	printArray(partition, partitionSize);
+	DEBUG printf("%d: ", rank);
+	DEBUG printArray(splitters, (T - 1 + 2));
+	DEBUG printArray(partition, partitionSize);
 	
 	int* lengths = malloc(sizeof(int) * T);
 	lengths[rank] = splitters[rank + 1] - splitters[rank];
@@ -130,17 +132,20 @@ int main() {
 	for (int i = 0; i < T; i++) {
 		sum += lengths[i];
 	}
-	printf("%d: phase 3 array size: %d\n", rank, sum);
-	printArray(lengths, T);
+	DEBUG printf("%d: phase 3 array size: %d\n", rank, sum);
+	DEBUG printArray(lengths, T);
  	
 	int* obtainedKeys = malloc(sizeof(int) * sum);
 	for (int i = 0; i < T; i++) {
                 if (rank != i) {
                         int length = splitters[i + 1] - splitters[i];
+			printf("%d: Sending %d len to %d: ", rank, length, i);
+			printArray(partition + splitters[i], length);
                         MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
                 } else {
                         for (int j = 0; j < T; j++) {
                                 if (rank == j) continue;
+				printf("%d: Waiting to receive len(%d) from %d\n", rank, lengths[j], j); 
 				int* keysReceived = malloc(sizeof(int) * lengths[j]);
                                 MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                                 sum = 0;
@@ -152,7 +157,7 @@ int main() {
                         }
                 }
         }
-	printArray(obtainedKeys, sum);
+	DEBUG printArray(obtainedKeys, sum);
 	// Phase 4:
 
 	MPI_Finalize();
