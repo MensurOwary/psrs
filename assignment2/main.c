@@ -31,11 +31,11 @@ void isSorted(int* arr, int size) {
 	printf("Sorted\n");
 }
 
-int bytes(int size) {
+static inline int bytes(int size) {
 	return sizeof(int) * size;
 }
 
-int* intAlloc(int size) {
+static inline int* intAlloc(int size) {
 	return malloc(bytes(size));
 }
 
@@ -46,13 +46,12 @@ int* generateArrayDefault(int size) {
 	return r;
 }
 
-void send(int* data, int size, int dest) {
+static inline void send(int* data, int size, int dest) {
 	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
 }
 
-void recv(int* data, int size, int src) {
-	printf("received %d to %d\n", size, src);
-	MPI_Recv(data, size, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+static inline void recv(int* buffer, int bufferSize, int src) {
+	MPI_Recv(buffer, bufferSize, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
 int main(int argc, char *argv[]) {
@@ -80,22 +79,17 @@ int main(int argc, char *argv[]) {
 		memcpy(partition, DATA, bytes(perProcessor));
 		for (int i = 1; i < T; i++) {
 			int* start = DATA + (i * perProcessor);
-			// MPI_Send(start, partitionSize, MPI_INT, i, 0, MPI_COMM_WORLD);
 			send(start, partitionSize, i);
 		}
 	} SLAVE {
-		MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		// printf("%d: 1 - ", rank);
-		// recv(partition, partitionSize, ROOT);
+		recv(partition, partitionSize, ROOT);
 	}
 	// Phase 1: Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
 	
 	// Phase 1: Regular sampling
-	/* regular sampling */
-	int ix = 0;
 	int* localRegularSamples = intAlloc(T);
-	for (int i = 0; i < T; i++) {
+	for (int i = 0, ix = 0; i < T; i++) {
 		localRegularSamples[ix++] = partition[i * W];
 	}
 	// Phase 2: Sending samples to master
@@ -104,17 +98,14 @@ int main(int argc, char *argv[]) {
 		regularSamples = intAlloc(T * T); 
 		for (int i = 1; i < T; i++) {
 			int* start = regularSamples + (i * T);
-			MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			// printf("%d: 2 - ", rank);
-			// recv(start, T, i);
+			recv(start, T, i);
 		}
 		memcpy(regularSamples, localRegularSamples, bytes(T)); 
 	} SLAVE {
-		// MPI_Send(localRegularSamples, T, MPI_INT, ROOT, 0, MPI_COMM_WORLD); 
 		send(localRegularSamples, T, ROOT);
 	}
 	free(localRegularSamples);
-	// Phase 2: Sorting and picking pivots
+	// Phase 2: Sorting samples and picking pivots
 	int* pivots = intAlloc(T - 1);
 	MASTER {
 		qsort(regularSamples, T * T, bytes(1), cmpfunc);
@@ -124,8 +115,9 @@ int main(int argc, char *argv[]) {
 		}
 		free(regularSamples);
 	}
+	// Phase 2: Send pivots to all workers/slaves
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
-	// Phase 3:
+	// Phase 3: Finding splitting positions
 	int* splitters = intAlloc(T + 1);
 	splitters[0] = 0;
 	splitters[T] = partitionSize;
@@ -136,63 +128,62 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	free(pivots);
-	
+	// Phase 3: Sharing array pieces
+	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
 	int* lengths = intAlloc(T);
 	lengths[rank] = splitters[rank + 1] - splitters[rank];
 	for (int i = 0; i < T; i++) {
 		if (rank != i) {
 			int length = splitters[i + 1] - splitters[i];
-			// MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
 			send(&length, 1, i);
 		} else {
 			for (int j = 0; j < T; j++) {
 				if (rank == j) continue;
-				MPI_Recv(&partitionSize, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				// printf("%d: 3 - ", rank);
-				// recv(&partitionSize, 1, j);
+				recv(&partitionSize, 1, j);
 				lengths[j] = partitionSize;
 			}
 		}
 	}
-	int sum = 0;
+	// Phase 3: Finding the total size of the array 
+	// to place all the acquired pieces
+	int obtainedKeysSize = 0;
 	for (int i = 0; i < T; i++) {
-		sum += lengths[i];
+		obtainedKeysSize += lengths[i];
 	}
  	
-	int* obtainedKeys = intAlloc(sum);
+	// Phase 3: Exchanging of actual array pieces	
+	int* obtainedKeys = intAlloc(obtainedKeysSize);
 	for (int i = 0; i < T; i++) {
                 if (rank != i) {
                         int length = splitters[i + 1] - splitters[i];
-                        // MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
 			send(partition + splitters[i], length, i);
                 } else {
                         for (int j = 0; j < T; j++) {
                                 if (rank == j) {
+					int offset = 0;
+					for (int k = 0; k < j; k++) offset += lengths[k];
+					memcpy(obtainedKeys + offset, partition + splitters[j], bytes(lengths[j]));
+				} else {
+					int* keysReceived = intAlloc(lengths[j]);
+					recv(keysReceived, lengths[j], j);                                
+	
 					int pos = 0;
-					for (int k = 0; k < j; k++) pos += lengths[k];
-					memcpy(obtainedKeys + pos, partition + splitters[j], bytes(lengths[j]));
-					continue;
+        				for (int k = 0; k < j; k++) {
+                				pos += lengths[k];
+        				}
+					memcpy(obtainedKeys + pos, keysReceived, bytes(lengths[j]));
+					free(keysReceived);
 				}
-				int* keysReceived = intAlloc(lengths[j]);
-                                MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				// printf("%d: 4 - ", rank);
-				//recv(keysReceived, lengths[j], j);
-                                
-				int pos = 0;
-        			for (int k = 0; k < j; k++) {
-                			pos += lengths[k];
-        			}
-				memcpy(obtainedKeys + pos, keysReceived, bytes(lengths[j]));
-				free(keysReceived);
                         }
                 }
         }
 	free(partition);
 	free(splitters);
-	// Phase 4:
+	// Phase 4: Merging obtained keys
+	// Phase 4: Creating the indices array for those pieces (to help merging)
 	int* indices = intAlloc(T * 2);
 	indices[0] = 0;
-	indices[T * 2 - 1] = sum;
+	indices[T * 2 - 1] = obtainedKeysSize;
 	int localSum = 0;
 	for (int i = 1, x = 0; i < T * 2 - 1; i+=2) {
 		localSum += lengths[x++];
@@ -200,9 +191,10 @@ int main(int argc, char *argv[]) {
 		indices[i+1] = localSum;
 	}
 	
-	int* mergedArray = intAlloc(sum);
+	// Phase 4: Merging
+	int* mergedArray = intAlloc(obtainedKeysSize);
 	int mi = 0;
-	while (mi < sum) {
+	while (mi < obtainedKeysSize) {
 		int pos = findInitialMinPos(indices, T * 2);
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
@@ -223,39 +215,33 @@ int main(int argc, char *argv[]) {
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
-		lengths[0] = sum;
+		lengths[0] = obtainedKeysSize;
 		for (int i = 1; i < T; i++) {
 			int length;
-			MPI_Recv(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			// printf("%d: 5 - ", rank);
-			// recv(&length, 1, i);
+			recv(&length, 1, i);
 			lengths[i] = length;
 		}
 	} SLAVE {
-		// MPI_Send(&sum, 1, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
-		send(&sum, 1, ROOT);
+		send(&obtainedKeysSize, 1, ROOT);
 	}
 	
 	MASTER {
 		int* FINAL = intAlloc(SIZE);
-		memcpy(FINAL, mergedArray, bytes(sum));
+		memcpy(FINAL, mergedArray, bytes(obtainedKeysSize));
 		free(mergedArray);
 		for (int i = 1; i < T; i++) {
 			int* array = intAlloc(lengths[i]);
-			MPI_Recv(array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			// printf("%d: 6 - ", rank);
-			// recv(array, lengths[i], i);
+			recv(array, lengths[i], i);
 			int offset = 0;
 			for (int x = 0; x < i; x++) offset += lengths[x];
 			memcpy(FINAL + offset, array, bytes(lengths[i]));
 			free(array);
 		}
-		free(lengths);
 		isSorted(FINAL, SIZE);
+		free(lengths);
 		free(FINAL);
 	} SLAVE {
-		// MPI_Send(mergedArray, sum, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
-		send(mergedArray, sum, ROOT);
+		send(mergedArray, obtainedKeysSize, ROOT);
 		free(mergedArray);
 	}
 
