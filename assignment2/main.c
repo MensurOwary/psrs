@@ -166,7 +166,7 @@ int main() {
                         }
                 }
         }
-	printf("%d Obtained keys: ", rank);
+	printf("%d Obtained %d keys: ", rank, sum);
 	printArray(obtainedKeys, sum);
 	// Phase 4:
 
