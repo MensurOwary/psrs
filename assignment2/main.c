@@ -51,6 +51,7 @@ void send(int* data, int size, int dest) {
 }
 
 void recv(int* data, int size, int src) {
+	printf("received %d to %d\n", size, src);
 	MPI_Recv(data, size, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
