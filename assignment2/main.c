@@ -166,9 +166,20 @@ int main() {
                         }
                 }
         }
-	printf("%d: Obtained %d keys: ", rank, sum);
-	printArray(obtainedKeys, sum);
+	DEBUG printf("%d: Obtained %d keys: ", rank, sum);
+	DEBUG printArray(obtainedKeys, sum);
 	// Phase 4:
+	int* indices = malloc(sizeof(int) * (T + 1));
+	indices[0] = 0;
+	indices[T] = sum;
+	sum = 0;
+	for (int i = 1; i < T; i++) {
+		sum += lengths[i-1];
+		indices[i] = sum;
+	}
+		
+	printf("%d: Indices %d keys: ", rank, T + 1);
+	printArray(indices, T + 1);
 
 	MPI_Finalize();
 }
