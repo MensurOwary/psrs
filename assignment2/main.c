@@ -46,6 +46,10 @@ int* generateArrayDefault(int size) {
 	return r;
 }
 
+void send(int* data, int size, int dest) {
+	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
+}
+
 int main(int argc, char *argv[]) {
 	int SIZE = atoi(argv[1]);
 
@@ -71,7 +75,8 @@ int main(int argc, char *argv[]) {
 		memcpy(partition, DATA, bytes(perProcessor));
 		for (int i = 1; i < T; i++) {
 			int* start = DATA + (i * perProcessor);
-			MPI_Send(start, partitionSize, MPI_INT, i, 0, MPI_COMM_WORLD);
+			// MPI_Send(start, partitionSize, MPI_INT, i, 0, MPI_COMM_WORLD);
+			send(start, partitionSize, i);
 		}
 	} SLAVE {
 		MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -96,7 +101,8 @@ int main(int argc, char *argv[]) {
 		}
 		memcpy(regularSamples, localRegularSamples, bytes(T)); 
 	} SLAVE {
-		MPI_Send(localRegularSamples, T, MPI_INT, ROOT, 0, MPI_COMM_WORLD); 
+		// MPI_Send(localRegularSamples, T, MPI_INT, ROOT, 0, MPI_COMM_WORLD); 
+		send(localRegularSamples, T, ROOT);
 	}
 	free(localRegularSamples);
 	// Phase 2: Sorting and picking pivots
@@ -127,7 +133,8 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < T; i++) {
 		if (rank != i) {
 			int length = splitters[i + 1] - splitters[i];
-			MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+			// MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+			send(&length, 1, i);
 		} else {
 			for (int j = 0; j < T; j++) {
 				if (rank == j) continue;
@@ -145,7 +152,8 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < T; i++) {
                 if (rank != i) {
                         int length = splitters[i + 1] - splitters[i];
-                        MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
+                        // MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
+			send(partition + splitters[i], length, i);
                 } else {
                         for (int j = 0; j < T; j++) {
                                 if (rank == j) {
@@ -209,7 +217,8 @@ int main(int argc, char *argv[]) {
 			lengths[i] = length;
 		}
 	} SLAVE {
-		MPI_Send(&sum, 1, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
+		// MPI_Send(&sum, 1, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
+		send(&sum, 1, ROOT);
 	}
 	
 	MASTER {
@@ -228,7 +237,8 @@ int main(int argc, char *argv[]) {
 		isSorted(FINAL, SIZE);
 		free(FINAL);
 	} SLAVE {
-		MPI_Send(mergedArray, sum, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
+		// MPI_Send(mergedArray, sum, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
+		send(mergedArray, sum, ROOT);
 		free(mergedArray);
 	}
 
