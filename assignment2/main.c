@@ -22,6 +22,15 @@ void printArray(int* a, int size) {
 	printf("\n");
 }
 
+int findInitialMinPos(int * indices, int size) {
+	for (int i = 0; i < size - 1; i++) {
+		if (indices[i] != indices[i+1]) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 int main() {
 	// generate data
 	int* DATA = generateArrayDefault();
@@ -172,14 +181,31 @@ int main() {
 	int* indices = malloc(sizeof(int) * (T + 1));
 	indices[0] = 0;
 	indices[T] = sum;
-	sum = 0;
+	int localSum = 0;
 	for (int i = 1; i < T; i++) {
-		sum += lengths[i-1];
-		indices[i] = sum;
+		localSum += lengths[i-1];
+		indices[i] = localSum;
 	}
-		
-	printf("%d: Indices %d keys: ", rank, T + 1);
-	printArray(indices, T + 1);
+	
+	int* mergedArray = malloc(sizeof(int) * sum);
+	int mi = 0;
+	while (mi < sum) {
+		int pos = findInitialMinPos(indices, T + 1);
+		if (pos == -1) break;
+		int min = obtainedKeys[indices[pos]];
+		for (int i = 0; i <= T; i++) {
+			if (indices[i] != indices[i+1]) {
+				if (obtainedKeys[indices[i]] < min) {
+					min = obtainedKeys[ix];
+					pos = i;
+				}
+			}
+		}
+		mergedArray[mi++] = min;
+		indices[pos]++;
+	}
+	printf("%d: Keys sorted: ", rank);
+	printArray(mergedArray, sum);
 
 	MPI_Finalize();
 }
