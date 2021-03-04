@@ -196,7 +196,7 @@ int main() {
 		for (int i = 0; i <= T; i++) {
 			if (indices[i] != indices[i+1]) {
 				if (obtainedKeys[indices[i]] < min) {
-					min = obtainedKeys[ix];
+					min = obtainedKeys[indices[i]];
 					pos = i;
 				}
 			}
