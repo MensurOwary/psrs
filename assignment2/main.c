@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
 			send(start, partitionSize, i);
 		}
 	} SLAVE {
-		MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		// MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		// printf("%d: 1 - ", rank);
-		// recv(partition, partitionSize, ROOT);
+		recv(partition, partitionSize, ROOT);
 	}
 	// Phase 1: Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
@@ -104,9 +104,9 @@ int main(int argc, char *argv[]) {
 		regularSamples = intAlloc(T * T); 
 		for (int i = 1; i < T; i++) {
 			int* start = regularSamples + (i * T);
-			// MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			printf("%d: 2 - ", rank);
-			recv(start, T, i);
+			// recv(start, T, i);
 		}
 		memcpy(regularSamples, localRegularSamples, bytes(T)); 
 	} SLAVE {
