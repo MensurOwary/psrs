@@ -148,7 +148,8 @@ int main() {
 				printf("%d: Waiting to receive len(%d) from %d\n", rank, lengths[j], j); 
 				int* keysReceived = malloc(sizeof(int) * lengths[j]);
                                 MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				printf("%d: Finished waiting for len(%d) from %d\n", rank, lengths[j], j);
+				printf("%d: Finished waiting for len(%d) from %d: ", rank, lengths[j], j);
+				printArray(keysReceived, lengths[j]);
                                 sum = 0;
         			for (int k = 0; k < j; k++) {
                 			sum += lengths[k];
