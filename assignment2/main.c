@@ -195,6 +195,7 @@ int main() {
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
 		MASTER printf("Initial min: %d\n", min);
+		MASTER printArray(indices, T + 1);
 		for (int i = 0; i < T + 1; i++) {
 			if (indices[i] != indices[i+1]) {
 				if (obtainedKeys[indices[i]] < min) {
