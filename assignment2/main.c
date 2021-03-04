@@ -220,6 +220,7 @@ int main(int argc, char *argv[]) {
 			for (int x = 0; x < i; x++) offset += lengths[x];
 			memcpy(FINAL + offset, array, sizeof(int) * lengths[i]);
 		}
+		printArray(FINAL, SIZE);
 		isSorted(FINAL, SIZE);
 	} else {
 		MPI_Send(mergedArray, sum, MPI_INT, 0, 0, MPI_COMM_WORLD);
