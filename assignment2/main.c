@@ -234,6 +234,7 @@ int main() {
 			MPI_Recv(array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			int offset = 0;
 			for (int x = 0; x < i; x++) offset += lengths[x];
+			printf("offset for %d is %d\n", i, offset);  
 			memcpy(FINAL + offset, array, sizeof(int) * lengths[i]);
 		}
 
