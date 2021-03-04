@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 	// Phase 3:
 	int partitionSize = rank == T - 1 ? (SIZE - (T - 1) * perProcessor) : perProcessor; 
+	printf("%d: ps : %d\n", rank, partitionSize);
 	int* splitters = malloc(sizeof(int) * (T - 1 + 2));
 	splitters[0] = 0;
 	splitters[T] = partitionSize;
