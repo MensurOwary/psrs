@@ -100,6 +100,7 @@ int main() {
 	}
 	printf("%d: ", rank);
 	printArray(splitters, (T - 1 + 2));
+	printArray(partition, partitionSize);
 	
 	int* lengths = malloc(sizeof(int) * T);
 	lengths[rank] = splitters[rank + 1] - splitters[rank];
@@ -121,7 +122,6 @@ int main() {
 		sum += lengths[i];
 	}
 	printf("%d: phase 3 array size: %d\n", rank, sum);
-	printf("%d: ", rank);
 	printArray(lengths, T);
  
 	// Phase 4:
