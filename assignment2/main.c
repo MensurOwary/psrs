@@ -231,7 +231,7 @@ int main() {
 		memcpy(FINAL, mergedArray, sizeof(int) * sum);
 		for (int i = 1; i < T; i++) {
 			int* array = malloc(sizeof(int) * lengths[i]);
-			MPI_Recv(&array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Recv(array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			int offset = 0;
 			for (int x = 0; x < i; x++) offset += lengths[x];
 			memcpy(FINAL + offset, array, sizeof(int) * lengths[i]);
