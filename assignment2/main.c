@@ -92,6 +92,8 @@ int main() {
 			int pos = T * i + RO - 1;
 			pivots[ix++] = regularSamples[pos];
 		}
+		printf("Pivots: ");
+		printArray(pivots, (T - 1));
 	}
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 	// Phase 3:
