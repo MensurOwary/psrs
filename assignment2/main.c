@@ -50,6 +50,10 @@ void send(int* data, int size, int dest) {
 	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
 }
 
+void recv(int* data, int size, int src) {
+	MPI_Recv(data, size, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+}
+
 int main(int argc, char *argv[]) {
 	int SIZE = atoi(argv[1]);
 
@@ -79,7 +83,8 @@ int main(int argc, char *argv[]) {
 			send(start, partitionSize, i);
 		}
 	} SLAVE {
-		MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		// MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		recv(partition, perProcessor, ROOT);
 	}
 	// Phase 1: Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
@@ -97,7 +102,8 @@ int main(int argc, char *argv[]) {
 		regularSamples = intAlloc(T * T); 
 		for (int i = 1; i < T; i++) {
 			int* start = regularSamples + (i * T);
-			MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			// MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			recv(start, T, i);
 		}
 		memcpy(regularSamples, localRegularSamples, bytes(T)); 
 	} SLAVE {
@@ -138,7 +144,8 @@ int main(int argc, char *argv[]) {
 		} else {
 			for (int j = 0; j < T; j++) {
 				if (rank == j) continue;
-				MPI_Recv(&partitionSize, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				// MPI_Recv(&partitionSize, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				recv(&partitionSize, 1, j);
 				lengths[j] = partitionSize;
 			}
 		}
@@ -163,7 +170,8 @@ int main(int argc, char *argv[]) {
 					continue;
 				}
 				int* keysReceived = intAlloc(lengths[j]);
-                                MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                                // MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				recv(keysReceived, lengths[j], j);
                                 
 				int pos = 0;
         			for (int k = 0; k < j; k++) {
@@ -213,7 +221,8 @@ int main(int argc, char *argv[]) {
 		lengths[0] = sum;
 		for (int i = 1; i < T; i++) {
 			int length;
-			MPI_Recv(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			// MPI_Recv(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			recv(&length, 1, i);
 			lengths[i] = length;
 		}
 	} SLAVE {
@@ -227,7 +236,8 @@ int main(int argc, char *argv[]) {
 		free(mergedArray);
 		for (int i = 1; i < T; i++) {
 			int* array = intAlloc(lengths[i]);
-			MPI_Recv(array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			// MPI_Recv(array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			recv(array, lengths[i], i);
 			int offset = 0;
 			for (int x = 0; x < i; x++) offset += lengths[x];
 			memcpy(FINAL + offset, array, bytes(lengths[i]));
