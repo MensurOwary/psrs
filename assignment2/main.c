@@ -142,8 +142,8 @@ int main() {
 	for (int i = 0; i < T; i++) {
 		sum += lengths[i];
 	}
-	printf("%d: phase 3 array size: %d\n", rank, sum);
-	printArray(lengths, T);
+	MASTER printf("%d: phase 3 array size: %d\n", rank, sum);
+	MASTER printArray(lengths, T);
  	
 	int* obtainedKeys = malloc(sizeof(int) * sum);
 	for (int i = 0; i < T; i++) {
@@ -176,8 +176,8 @@ int main() {
                         }
                 }
         }
-	DEBUG printf("%d: Obtained %d keys: ", rank, sum);
-	DEBUG printArray(obtainedKeys, sum);
+	MASTER printf("%d: Obtained %d keys: ", rank, sum);
+	MASTER printArray(obtainedKeys, sum);
 	// Phase 4:
 	int* indices = malloc(sizeof(int) * (T + 1));
 	indices[0] = 0;
@@ -194,7 +194,8 @@ int main() {
 		int pos = findInitialMinPos(indices, T + 1);
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
-		for (int i = 0; i <= T; i++) {
+		MASTER printf("Initial min: %d\n", min);
+		for (int i = 0; i < T + 1; i++) {
 			if (indices[i] != indices[i+1]) {
 				if (obtainedKeys[indices[i]] < min) {
 					min = obtainedKeys[indices[i]];
