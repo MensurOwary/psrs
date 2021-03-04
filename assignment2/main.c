@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
 		}
 	} SLAVE {
 		// MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		printf("%d: 1 - ", rank);
 		recv(partition, partitionSize, ROOT);
 	}
 	// Phase 1: Sorting local data
@@ -104,6 +105,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 1; i < T; i++) {
 			int* start = regularSamples + (i * T);
 			// MPI_Recv(start, T, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			printf("%d: 2 - ", rank);
 			recv(start, T, i);
 		}
 		memcpy(regularSamples, localRegularSamples, bytes(T)); 
@@ -146,6 +148,7 @@ int main(int argc, char *argv[]) {
 			for (int j = 0; j < T; j++) {
 				if (rank == j) continue;
 				// MPI_Recv(&partitionSize, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				printf("%d: 3 - ", rank);
 				recv(&partitionSize, 1, j);
 				lengths[j] = partitionSize;
 			}
@@ -172,6 +175,7 @@ int main(int argc, char *argv[]) {
 				}
 				int* keysReceived = intAlloc(lengths[j]);
                                 // MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				printf("%d: 4 - ", rank);
 				recv(keysReceived, lengths[j], j);
                                 
 				int pos = 0;
@@ -223,6 +227,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 1; i < T; i++) {
 			int length;
 			// MPI_Recv(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			printf("%d: 5 - ", rank);
 			recv(&length, 1, i);
 			lengths[i] = length;
 		}
@@ -238,6 +243,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 1; i < T; i++) {
 			int* array = intAlloc(lengths[i]);
 			// MPI_Recv(array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			printf("%d: 6 - ", rank);
 			recv(array, lengths[i], i);
 			int offset = 0;
 			for (int x = 0; x < i; x++) offset += lengths[x];
