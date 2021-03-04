@@ -33,7 +33,7 @@ int findInitialMinPos(int * indices, int size) {
 }
 
 int main() {
-	// generate data
+	// generate data: only in MASTER: this one is wrong!!
 	int* DATA = generateArrayDefault();
 	int SIZE = 36;
 
@@ -211,6 +211,35 @@ int main() {
 	}
 	printf("%d: Keys sorted: ", rank);
 	printArray(mergedArray, sum);
+	
+	// determining the individual lengths of the final array
+	MASTER {
+		lengths = realloc(lengths, T);
+		lengths[0] = sum;
+		for (int i = 1; i < T; i++) {
+			int length;
+			MPI_Recv(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			lengths[i] = length;
+		}
+	} else {
+		MPI_Send(&sum, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+	}
+	
+	int* FINAL = malloc(SIZE * sizeof(int));
+	MASTER {
+		memcpy(FINAL, mergedArray, sizeof(int) * sum);
+		for (int i = 1; i < T; i++) {
+			int* array = malloc(sizeof(int) * lengths[i]);
+			MPI_Recv(&array, lengths[i], MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			int offset;
+			for (int x = 0; x < T; x++) offset += lengths[x];
+			memcpy(FINAL + offset, array, sizeof(int) * lengths[i]);
+		}
+
+		printArray(FINAL, SIZE);
+	} else {
+		MPI_Send(&mergedArray, sum, MPI_INT, 0, 0, MPI_COMM_WORLD);
+	}
 
 	MPI_Finalize();
 }
