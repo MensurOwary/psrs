@@ -122,10 +122,12 @@ int main() {
 			MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
 			// MPI_Send(partitions + start, (end - start), MPI_INT, i, 0, MPI_COMM_WORLD); 
 		} else {
-			MPI_Status status;
-			MPI_Recv(&partitionSize, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-			printf("%d) Received %d from rank (%d)\n", rank, partitionSize, status.MPI_SOURCE); 
-			lengths[status.MPI_SOURCE] = partitionSize;
+			for (int j = 0; j < T; j++) {
+				if (rank == j) continue;
+				MPI_Recv(&partitionSize, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				printf("%d) Received %d from rank (%d)\n", rank, partitionSize, j); 
+				lengths[j] = partitionSize;
+			}
 		}
 	}
 	int sum = 0;
