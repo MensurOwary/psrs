@@ -46,7 +46,7 @@ int main() {
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
-	printf("%s with rank %d is up and ready to go!", processor_name, rank);
+	printf("%s with rank %d is up and ready to go!\n", processor_name, rank);
 	// Phase 0: Data distribution
 	int* partition = malloc(sizeof(int) * perProcessor);
 	if (rank == 0) {
