@@ -115,17 +115,13 @@ int main() {
 	int* lengths = malloc(sizeof(int) * T);
 	lengths[rank] = splitters[rank + 1] - splitters[rank];
 	for (int i = 0; i < T; i++) {
-		int start = splitters[i];
-		int end = splitters[i + 1];
 		if (rank != i) {
-			int length = end - start;
+			int length = splitters[i + 1] - splitters[i];
 			MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-			// MPI_Send(partitions + start, (end - start), MPI_INT, i, 0, MPI_COMM_WORLD); 
 		} else {
 			for (int j = 0; j < T; j++) {
 				if (rank == j) continue;
 				MPI_Recv(&partitionSize, 1, MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				printf("%d) Received %d from rank (%d)\n", rank, partitionSize, j); 
 				lengths[j] = partitionSize;
 			}
 		}
@@ -136,7 +132,27 @@ int main() {
 	}
 	printf("%d: phase 3 array size: %d\n", rank, sum);
 	printArray(lengths, T);
- 
+ 	
+	int* obtainedKeys = malloc(sizeof(int) * sum);
+	for (int i = 0; i < T; i++) {
+                if (rank != i) {
+                        int length = splitters[i + 1] - splitters[i];
+                        MPI_Send(partition + splitters[i], length, MPI_INT, i, 0, MPI_COMM_WORLD);
+                } else {
+                        for (int j = 0; j < T; j++) {
+                                if (rank == j) continue;
+				int* keysReceived = malloc(sizeof(int) * lengths[j]);
+                                MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                                sum = 0;
+        			for (int k = 0; k < j; j++) {
+                			sum += lengths[j];
+        			}
+				memcpy(obtainedKeys + sum, keysReceived, sizeof(int) * lengths[j]);
+				free(keysReceived);
+                        }
+                }
+        }
+	printArray(obtainedKeys, sum);
 	// Phase 4:
 
 	MPI_Finalize();
