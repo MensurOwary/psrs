@@ -132,8 +132,8 @@ int main() {
 	for (int i = 0; i < T; i++) {
 		sum += lengths[i];
 	}
-	DEBUG printf("%d: phase 3 array size: %d\n", rank, sum);
-	DEBUG printArray(lengths, T);
+	printf("%d: phase 3 array size: %d\n", rank, sum);
+	printArray(lengths, T);
  	
 	int* obtainedKeys = malloc(sizeof(int) * sum);
 	for (int i = 0; i < T; i++) {
@@ -145,9 +145,9 @@ int main() {
                 } else {
                         for (int j = 0; j < T; j++) {
                                 if (rank == j) {
-					sum = 0;
-					for (int k = 0; k < j; k++) sum += lengths[k];
-					memcpy(obtainedKeys + sum, partition + splitters[j], sizeof(int) * lengths[j]);
+					int pos = 0;
+					for (int k = 0; k < j; k++) pos += lengths[k];
+					memcpy(obtainedKeys + pos, partition + splitters[j], sizeof(int) * lengths[j]);
 					continue;
 				}
 				DEBUG printf("%d: Waiting to receive len(%d) from %d\n", rank, lengths[j], j); 
@@ -157,16 +157,16 @@ int main() {
 				DEBUG printf("%d: Finished waiting for len(%d) from %d: ", rank, lengths[j], j);
 				DEBUG printArray(keysReceived, lengths[j]);
                                 
-				sum = 0;
+				int pos = 0;
         			for (int k = 0; k < j; k++) {
-                			sum += lengths[k];
+                			pos += lengths[k];
         			}
-				memcpy(obtainedKeys + sum, keysReceived, sizeof(int) * lengths[j]);
+				memcpy(obtainedKeys + pos, keysReceived, sizeof(int) * lengths[j]);
 				free(keysReceived);
                         }
                 }
         }
-	printf("%d Obtained %d keys: ", rank, sum);
+	printf("%d: Obtained %d keys: ", rank, sum);
 	printArray(obtainedKeys, sum);
 	// Phase 4:
 
