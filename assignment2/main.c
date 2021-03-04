@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
 			send(start, partitionSize, i);
 		}
 	} SLAVE {
-		// MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf("%d: 1 - ", rank);
-		recv(partition, partitionSize, ROOT);
+		MPI_Recv(partition, perProcessor, MPI_INT, ROOT, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		// printf("%d: 1 - ", rank);
+		// recv(partition, partitionSize, ROOT);
 	}
 	// Phase 1: Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
