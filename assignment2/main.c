@@ -4,6 +4,7 @@
 #include <string.h>
 
 #define DEBUG if (1 != 1)
+#define MASTER if (rank == 0)
 
 int* generateArrayDefault() {
 	int arr[36] = {16, 2, 17, 24, 33, 28, 30, 1, 0, 27, 9, 25, 34, 23, 19, 18, 11, 7, 21, 13, 8, 35, 12, 29, 6, 3, 4, 14, 22, 15, 32, 10, 26, 31, 20, 5};
@@ -201,11 +202,12 @@ int main() {
 				}
 			}
 		}
+		MASTER printf("Min: %d\n", min);
 		mergedArray[mi++] = min;
 		indices[pos]++;
 	}
-	printf("%d: Keys sorted: ", rank);
-	printArray(mergedArray, sum);
+	MASTER printf("%d: Keys sorted: ", rank);
+	MASTER printArray(mergedArray, sum);
 
 	MPI_Finalize();
 }
