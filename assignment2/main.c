@@ -32,6 +32,16 @@ int findInitialMinPos(int * indices, int size) {
 	return -1;
 }
 
+void isSorted(int* arr, int size) {
+	for (int i = 0; i < size - 1; i++) {
+		if (arr[i] > arr[i+1]) {
+			printf("Not sorted: %d > %d\n", arr[i], arr[i+1]);
+			return;	
+		}
+	}
+	printf("Sorted\n");
+}
+
 int main() {
 	// generate data: only in MASTER: this one is wrong!!
 	int* DATA = generateArrayDefault();
@@ -237,8 +247,8 @@ int main() {
 			printf("offset for %d is %d\n", i, offset);  
 			memcpy(FINAL + offset, array, sizeof(int) * lengths[i]);
 		}
-
-		printArray(FINAL, SIZE);
+		isSorted(FINAL, SIZE);
+		// printArray(FINAL, SIZE);
 	} else {
 		MPI_Send(mergedArray, sum, MPI_INT, 0, 0, MPI_COMM_WORLD);
 	}
