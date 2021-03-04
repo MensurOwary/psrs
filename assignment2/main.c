@@ -109,8 +109,9 @@ int main() {
 			MPI_Send(&length, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
 			// MPI_Send(partitions + start, (end - start), MPI_INT, i, 0, MPI_COMM_WORLD); 
 		} else {
-			MPI_Recv(&partitionSize, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			lengths[i] = partitionSize;
+			MPI_Status status;
+			MPI_Recv(&partitionSize, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+			lengths[status.MPI_SOURCE] = partitionSize;
 		}
 	}
 	int sum = 0;
