@@ -12,7 +12,7 @@ int* generateArrayDefault(int size) {
 	srandom(15);
 	int* randoms = malloc(sizeof(int) * size);
 	for (int i = 0; i < size; i++) {
-		randoms[i] = (int) random(); // arr[i];
+		randoms[i] = (int) random() % 1000; // arr[i];
 	}
 	return randoms;
 }
@@ -65,22 +65,22 @@ int main(int argc, char *argv[]) {
 
 	// Phase 0: Data distribution
 	int* partition = malloc(sizeof(int) * perProcessor);
+	int partitionSize = perProcessor;
+	if (rank == T - 1) {
+		partitionSize = SIZE - (T - 1) * perProcessor;
+	}
 	MASTER {
 		int* DATA = generateArrayDefault(SIZE);
 		memcpy(partition, DATA, sizeof(int) * perProcessor);
 		for (int i = 1; i < T; i++) {
 			int* start = DATA + (i * perProcessor);
-			int partitionSize = perProcessor;
-			if (rank == T - 1) {
-				partitionSize = SIZE - (T - 1) * perProcessor;
-			}
 			MPI_Send(start, partitionSize, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 	} SLAVE {
 		MPI_Recv(partition, perProcessor, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
 	// Phase 1: Sorting local data
-	qsort(partition, perProcessor, sizeof(int), cmpfunc);
+	qsort(partition, partitionSize, sizeof(int), cmpfunc);
 	
 	// Phase 1: Regular sampling
 	/* regular sampling */
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 	}
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 	// Phase 3:
-	int partitionSize = rank == T - 1 ? (SIZE - (T - 1) * perProcessor) : perProcessor; 
+	// int partitionSize = rank == T - 1 ? (SIZE - (T - 1) * perProcessor) : perProcessor; 
 	printf("%d: ps : %d\n", rank, partitionSize);
 	int* splitters = malloc(sizeof(int) * (T - 1 + 2));
 	splitters[0] = 0;
