@@ -124,6 +124,7 @@ int main() {
 		} else {
 			MPI_Status status;
 			MPI_Recv(&partitionSize, 1, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+			printf("%d) Received %d from rank (%d)\n", rank, partitionSize, status.MPI_SOURCE); 
 			lengths[status.MPI_SOURCE] = partitionSize;
 		}
 	}
