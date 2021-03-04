@@ -2,7 +2,7 @@ all:
 	mpicc -o a.out main.c
 
 run: 
-	mpirun -n 3 -f hosts ./a.out
+	mpirun -n 3 -f hosts ./a.out 36
 
 push:
 	git add -A
