@@ -240,7 +240,7 @@ int main() {
 
 		printArray(FINAL, SIZE);
 	} else {
-		MPI_Send(&mergedArray, sum, MPI_INT, 0, 0, MPI_COMM_WORLD);
+		MPI_Send(mergedArray, sum, MPI_INT, 0, 0, MPI_COMM_WORLD);
 	}
 
 	MPI_Finalize();
