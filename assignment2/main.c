@@ -150,7 +150,7 @@ int main() {
                                 MPI_Recv(keysReceived, lengths[j], MPI_INT, j, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				printf("%d: Finished waiting for len(%d) from %d\n", rank, lengths[j], j);
                                 sum = 0;
-        			for (int k = 0; k < j; j++) {
+        			for (int k = 0; k < j; k++) {
                 			sum += lengths[j];
         			}
 				memcpy(obtainedKeys + sum, keysReceived, sizeof(int) * lengths[j]);
