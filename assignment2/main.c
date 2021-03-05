@@ -104,11 +104,11 @@ void phase_3() {
 		pieceLengths[i] = splitters[i+1] - splitters[i];
 	}
 	
-	MPI_Scatter(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, rank, MPI_COMM_WORLD); 
+	MPI_Alltoall(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, MPI_COMM_WORLD); 
 	lengths[rank] = pieceLengths[rank];
 	printf("%d: ", rank);
 	printArray(lengths, T);
-	
+
 	// Phase 3: Finding the total size of the array 
 	// to place all the acquired pieces
 	for (int i = 0; i < T; i++) {
