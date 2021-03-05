@@ -192,6 +192,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 1; i < T; i++) {
 			send(DATA + i * perProcessor, partitionSize, i);
 		}
+		free(DATA);
 	} SLAVE {
 		recv(partition, partitionSize, ROOT);
 	}
