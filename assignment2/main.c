@@ -85,27 +85,13 @@ void phase_3() {
 	// Phase 3: Sharing array pieces
 	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
 	lengths = intAlloc(T);
-	/*lengths[rank] = splitters[rank + 1] - splitters[rank];
-	for (int i = 0; i < T; i++) {
-		if (rank != i) {
-			int length = splitters[i + 1] - splitters[i];
-			send(&length, 1, i);
-		} else {
-			for (int j = 0; j < T; j++) {
-				if (rank == j) continue;
-				recv(&partitionSize, 1, j);
-				lengths[j] = partitionSize;
-			}
-		}
-	}*/
-
+	
 	int* pieceLengths = intAlloc(T);
 	for (int i = 0; i < T; i++) {
 		pieceLengths[i] = splitters[i+1] - splitters[i];
 	}
 	
 	MPI_Alltoall(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, MPI_COMM_WORLD); 
-	lengths[rank] = pieceLengths[rank];
 	printf("%d: ", rank);
 	printArray(lengths, T);
 
