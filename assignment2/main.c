@@ -48,14 +48,7 @@ void phase_2() {
 	// Phase 2: Sending samples to master
 	MASTER {
 		regularSamples = intAlloc(T * T); 
-		// for (int i = 1; i < T; i++) {
-		//	recv(regularSamples + T * i, T, i);
-		//}
-		// memcpy(regularSamples, localRegularSamples, bytes(T)); 
-	} SLAVE {
-		// send(localRegularSamples, T, ROOT);
 	}
-	// free(localRegularSamples);
 
 	MPI_Gather(localRegularSamples, T, MPI_INT, regularSamples, T, MPI_INT, ROOT, MPI_COMM_WORLD);
 
