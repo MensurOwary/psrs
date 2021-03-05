@@ -48,14 +48,17 @@ void phase_2() {
 	// Phase 2: Sending samples to master
 	MASTER {
 		regularSamples = intAlloc(T * T); 
-		for (int i = 1; i < T; i++) {
-			recv(regularSamples + T * i, T, i);
-		}
-		memcpy(regularSamples, localRegularSamples, bytes(T)); 
+		// for (int i = 1; i < T; i++) {
+		//	recv(regularSamples + T * i, T, i);
+		//}
+		// memcpy(regularSamples, localRegularSamples, bytes(T)); 
 	} SLAVE {
-		send(localRegularSamples, T, ROOT);
+		// send(localRegularSamples, T, ROOT);
 	}
-	free(localRegularSamples);
+	// free(localRegularSamples);
+
+	MPI_Gather(localRegularSamples, T, MPI_INT, regularSamples, T, MPI_INT, ROOT, MPI_COMM_WORLD);
+
 	// Phase 2: Sorting samples and picking pivots
 	pivots = intAlloc(T - 1);
 	MASTER {
@@ -70,6 +73,16 @@ void phase_2() {
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 }
 
+int* createPositions(int* array, int size) {
+	int* positions = intAlloc(size);
+	int pos = 0;
+	for (int i = 0; i < size; i++) {
+		positions[i] = pos;
+		pos += array[i];
+	}
+	return positions;
+}
+
 void phase_3() {
 	// Phase 3: Finding splitting positions
 	splitters = intAlloc(T + 1);
@@ -82,65 +95,26 @@ void phase_3() {
 		}
 	}
 	free(pivots);
-	// Phase 3: Sharing array pieces
 	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
 	int* pieceLengths = intAlloc(T);
 	for (int i = 0; i < T; i++) pieceLengths[i] = splitters[i+1] - splitters[i];
 
 	lengths = intAlloc(T);	
 	MPI_Alltoall(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, MPI_COMM_WORLD);
-	// FIXME: free(pieceLengths); 
 	
-	int* positions = intAlloc(T);
-	int pos = 0;
-	for (int i = 0; i < T; i++) {
-		positions[i] = pos;
-		pos += pieceLengths[i];
-	}
+	// Phase 3: Sharing array pieces
+	int* positionsSend = createPositions(pieceLengths, T);
+	int* positionsRecv = createPositions(lengths, T);
 
-	int bufferSize = 0;
-	for (int i = 0; i < T; i++) bufferSize += lengths[i];
-	obtainedKeys = intAlloc(bufferSize);
-	int* positionsRecv = intAlloc(T);
-	pos = 0;
-	for (int i = 0; i < T; i++) {
-		positionsRecv[i] = pos;
-		pos += lengths[i];
-	}
-	
-	MPI_Alltoallv(partition, pieceLengths, positions, MPI_INT, obtainedKeys, lengths, positionsRecv, MPI_INT, MPI_COMM_WORLD);
-	
-	printf("%d: ", rank);
-	printArray(obtainedKeys, bufferSize);
-
-	// Phase 3: Finding the total size of the array 
-	// to place all the acquired pieces
+	obtainedKeysSize = 0;
 	for (int i = 0; i < T; i++) obtainedKeysSize += lengths[i];
- 	
-	// Phase 3: Exchanging of actual array pieces	
-	/*obtainedKeys = intAlloc(obtainedKeysSize);
-	for (int i = 0; i < T; i++) {
-                if (rank != i) {
-                        int length = splitters[i + 1] - splitters[i];
-			send(partition + splitters[i], length, i);
-                } else {
-                        for (int j = 0; j < T; j++) {
-                                if (rank == j) {
-					memcpy(obtainedKeys + offset(lengths, j), partition + splitters[j], bytes(lengths[j]));
-				} else {
-					int* keysReceived = intAlloc(lengths[j]);
-					recv(keysReceived, lengths[j], j);                                
+	obtainedKeys = intAlloc(obtainedKeysSize);
 	
-					int pos = 0;
-        				for (int k = 0; k < j; k++) {
-                				pos += lengths[k];
-        				}
-					memcpy(obtainedKeys + pos, keysReceived, bytes(lengths[j]));
-					free(keysReceived);
-				}
-                        }
-                }
-        } */
+	MPI_Alltoallv(partition, pieceLengths, positionsSend, MPI_INT, obtainedKeys, lengths, positionsRecv, MPI_INT, MPI_COMM_WORLD);
+ 	
+	free(pieceLengths);
+	free(positionsSend);
+	free(positionsRecv);	
 	free(partition);
 	free(splitters);
 }
