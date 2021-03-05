@@ -148,8 +148,7 @@ void phase_4() {
 	
 	// Phase 4: Merging
 	mergedArray = intAlloc(obtainedKeysSize);
-	int mi = 0;
-	while (mi < obtainedKeysSize) {
+	for (int mi = 0; mi < obtainedKeysSize; mi++) {
 		int pos = findInitialMinPos(indices, T * 2);
 		if (pos == -1) break;
 		int min = obtainedKeys[indices[pos]];
@@ -161,7 +160,7 @@ void phase_4() {
 				}
 			}
 		}
-		mergedArray[mi++] = min;
+		mergedArray[mi] = min;
 		indices[pos]++;
 	}
 	free(obtainedKeys);
@@ -203,7 +202,8 @@ int main(int argc, char *argv[]) {
 	// PHASE 3
 	phase_3();
 	// PHASE 4
-	phase_4();	
+	phase_4();
+	// PHASE Merge	
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 		send(&obtainedKeysSize, 1, ROOT);
 		free(lengths);
 	}
-	
+	// getting arrays from workers 
 	MASTER {
 		int* FINAL = intAlloc(SIZE);
 		memcpy(FINAL, mergedArray, bytes(obtainedKeysSize));
