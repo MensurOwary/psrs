@@ -9,6 +9,15 @@
 #define MASTER if (rank == ROOT)
 #define SLAVE else
 
+int* partition;
+int* localRegularSamples;
+int* regularSamples;
+int* pivots;
+int* splitters;
+int* lengths;
+int* obtainedKeys;
+int* mergedArray;
+
 static inline void send(int* data, int size, int dest) {
 	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
 }
@@ -34,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 	// Phase 0: Data distribution
 	int partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
-	int* partition = intAlloc(partitionSize);
+	partition = intAlloc(partitionSize);
 	MASTER {
 		int* DATA = generateArrayDefault(SIZE);
 		memcpy(partition, DATA, bytes(perProcessor));
@@ -48,12 +57,11 @@ int main(int argc, char *argv[]) {
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
 	
 	// Phase 1: Regular sampling
-	int* localRegularSamples = intAlloc(T);
+	localRegularSamples = intAlloc(T);
 	for (int i = 0, ix = 0; i < T; i++) {
 		localRegularSamples[ix++] = partition[i * W];
 	}
 	// Phase 2: Sending samples to master
-	int* regularSamples = NULL;
 	MASTER {
 		regularSamples = intAlloc(T * T); 
 		for (int i = 1; i < T; i++) {
@@ -65,7 +73,7 @@ int main(int argc, char *argv[]) {
 	}
 	free(localRegularSamples);
 	// Phase 2: Sorting samples and picking pivots
-	int* pivots = intAlloc(T - 1);
+	pivots = intAlloc(T - 1);
 	MASTER {
 		qsort(regularSamples, T * T, bytes(1), cmpfunc);
 		for (int i = 1, ix = 0; i < T; i++) {
@@ -77,7 +85,7 @@ int main(int argc, char *argv[]) {
 	// Phase 2: Send pivots to all workers/slaves
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 	// Phase 3: Finding splitting positions
-	int* splitters = intAlloc(T + 1);
+	splitters = intAlloc(T + 1);
 	splitters[0] = 0;
 	splitters[T] = partitionSize;
 	for (int i = 0, pc = 1, pi = 0; i < partitionSize && pi != T - 1; i++) {
@@ -89,7 +97,7 @@ int main(int argc, char *argv[]) {
 	free(pivots);
 	// Phase 3: Sharing array pieces
 	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
-	int* lengths = intAlloc(T);
+	lengths = intAlloc(T);
 	lengths[rank] = splitters[rank + 1] - splitters[rank];
 	for (int i = 0; i < T; i++) {
 		if (rank != i) {
@@ -111,7 +119,7 @@ int main(int argc, char *argv[]) {
 	}
  	
 	// Phase 3: Exchanging of actual array pieces	
-	int* obtainedKeys = intAlloc(obtainedKeysSize);
+	obtainedKeys = intAlloc(obtainedKeysSize);
 	for (int i = 0; i < T; i++) {
                 if (rank != i) {
                         int length = splitters[i + 1] - splitters[i];
@@ -151,7 +159,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	// Phase 4: Merging
-	int* mergedArray = intAlloc(obtainedKeysSize);
+	mergedArray = intAlloc(obtainedKeysSize);
 	int mi = 0;
 	while (mi < obtainedKeysSize) {
 		int pos = findInitialMinPos(indices, T * 2);
