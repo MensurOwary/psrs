@@ -17,6 +17,7 @@ int* splitters;
 int* lengths;
 int* obtainedKeys;
 int* mergedArray;
+int obtainedKeysSize = 0;
 
 static inline void send(int* data, int size, int dest) {
 	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
@@ -63,37 +64,7 @@ void phase_2(int rank, int T, int RO) {
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 }
 
-int main(int argc, char *argv[]) {
-	int SIZE = atoi(argv[1]);
-
-	MPI_Init(NULL, NULL);
-
-	// how many processors are available
-	int T; MPI_Comm_size(MPI_COMM_WORLD, &T);
-	
-	int perProcessor = SIZE / T;
-	int W = SIZE / (T * T);
-	int RO = T / 2; 
-	
-	// what's my rank?
-	int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-	// Phase 0: Data distribution
-	int partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
-	partition = intAlloc(partitionSize);
-	MASTER {
-		int* DATA = generateArrayDefault(SIZE);
-		memcpy(partition, DATA, bytes(perProcessor));
-		for (int i = 1; i < T; i++) {
-			send(DATA + i * perProcessor, partitionSize, i);
-		}
-	} SLAVE {
-		recv(partition, partitionSize, ROOT);
-	}
-	// PHASE 1
-	phase_1(partitionSize, T, W);
-	// PHASE 2
-	phase_2(rank, T, RO);
+void phase_3(int rank, int T, int partitionSize) {
 	// Phase 3: Finding splitting positions
 	splitters = intAlloc(T + 1);
 	splitters[0] = 0;
@@ -123,7 +94,7 @@ int main(int argc, char *argv[]) {
 	}
 	// Phase 3: Finding the total size of the array 
 	// to place all the acquired pieces
-	int obtainedKeysSize = 0;
+	// int obtainedKeysSize = 0;
 	for (int i = 0; i < T; i++) {
 		obtainedKeysSize += lengths[i];
 	}
@@ -156,6 +127,9 @@ int main(int argc, char *argv[]) {
         }
 	free(partition);
 	free(splitters);
+}
+
+void phase_4(int T) {
 	// Phase 4: Merging obtained keys
 	// Phase 4: Creating the indices array for those pieces (to help merging)
 	int* indices = intAlloc(T * 2);
@@ -189,7 +163,43 @@ int main(int argc, char *argv[]) {
 	free(obtainedKeys);
 	free(indices);
 	// Phase 4: Done, PSRS Done!
+}
+
+int main(int argc, char *argv[]) {
+	int SIZE = atoi(argv[1]);
+
+	MPI_Init(NULL, NULL);
+
+	// how many processors are available
+	int T; MPI_Comm_size(MPI_COMM_WORLD, &T);
 	
+	int perProcessor = SIZE / T;
+	int W = SIZE / (T * T);
+	int RO = T / 2; 
+	
+	// what's my rank?
+	int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	// Phase 0: Data distribution
+	int partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+	partition = intAlloc(partitionSize);
+	MASTER {
+		int* DATA = generateArrayDefault(SIZE);
+		memcpy(partition, DATA, bytes(perProcessor));
+		for (int i = 1; i < T; i++) {
+			send(DATA + i * perProcessor, partitionSize, i);
+		}
+	} SLAVE {
+		recv(partition, partitionSize, ROOT);
+	}
+	// PHASE 1
+	phase_1(partitionSize, T, W);
+	// PHASE 2
+	phase_2(rank, T, RO);
+	// PHASE 3
+	phase_3(rank, T, partitionSize);
+	// PHASE 4
+	phase_4(T);	
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
