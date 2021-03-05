@@ -85,7 +85,7 @@ void phase_3() {
 	// Phase 3: Sharing array pieces
 	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
 	lengths = intAlloc(T);
-	lengths[rank] = splitters[rank + 1] - splitters[rank];
+	/*lengths[rank] = splitters[rank + 1] - splitters[rank];
 	for (int i = 0; i < T; i++) {
 		if (rank != i) {
 			int length = splitters[i + 1] - splitters[i];
@@ -97,10 +97,20 @@ void phase_3() {
 				lengths[j] = partitionSize;
 			}
 		}
+	}*/
+
+	int* pieceLengths = intAlloc(T);
+	for (int i = 0; i < T; i++) {
+		pieceLengths[i] = splitters[i+1] - splitters[i];
 	}
+	
+	MPI_Scatter(pieceLengths, 1, MPI_INT, lengths + rank, 1, MPI_INT, rank, MPI_COMM_WORLD); 
+	lengths[rank] = pieceLengths[rank];
+	printf("%d: ", rank);
+	printArray(lengths, T);
+	
 	// Phase 3: Finding the total size of the array 
 	// to place all the acquired pieces
-	// int obtainedKeysSize = 0;
 	for (int i = 0; i < T; i++) {
 		obtainedKeysSize += lengths[i];
 	}
