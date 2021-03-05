@@ -104,7 +104,7 @@ void phase_3() {
 		pieceLengths[i] = splitters[i+1] - splitters[i];
 	}
 	
-	MPI_Scatter(pieceLengths, 1, MPI_INT, lengths + rank, 1, MPI_INT, rank, MPI_COMM_WORLD); 
+	MPI_Scatter(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, rank, MPI_COMM_WORLD); 
 	lengths[rank] = pieceLengths[rank];
 	printf("%d: ", rank);
 	printArray(lengths, T);
