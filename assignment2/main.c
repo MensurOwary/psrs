@@ -84,25 +84,41 @@ void phase_3() {
 	free(pivots);
 	// Phase 3: Sharing array pieces
 	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
-	lengths = intAlloc(T);
-	
 	int* pieceLengths = intAlloc(T);
+	for (int i = 0; i < T; i++) pieceLengths[i] = splitters[i+1] - splitters[i];
+
+	lengths = intAlloc(T);	
+	MPI_Alltoall(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, MPI_COMM_WORLD);
+	// FIXME: free(pieceLengths); 
+	
+	int* positions = intAlloc(T);
+	int pos = 0;
 	for (int i = 0; i < T; i++) {
-		pieceLengths[i] = splitters[i+1] - splitters[i];
+		positions[i] = pos;
+		pos += pieceLengths[i];
+	}
+
+	int bufferSize = 0;
+	for (int i = 0; i < T; i++) bufferSize += lengths[i];
+	obtainedKeys = intAlloc(bufferSize);
+	int* positionsRecv = intAlloc(T);
+	pos = 0;
+	for (int i = 0; i < T; i++) {
+		positionsRecv[i] = pos;
+		pos += lengths[i];
 	}
 	
-	MPI_Alltoall(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, MPI_COMM_WORLD); 
+	MPI_Alltoallv(partition, pieceLengths, positions, MPI_INT, obtainedKeys, lengths, positionsRecv, MPI_INT, MPI_COMM_WORLD);
+	
 	printf("%d: ", rank);
-	printArray(lengths, T);
+	printArray(obtainedKeys, bufferSize);
 
 	// Phase 3: Finding the total size of the array 
 	// to place all the acquired pieces
-	for (int i = 0; i < T; i++) {
-		obtainedKeysSize += lengths[i];
-	}
+	for (int i = 0; i < T; i++) obtainedKeysSize += lengths[i];
  	
 	// Phase 3: Exchanging of actual array pieces	
-	obtainedKeys = intAlloc(obtainedKeysSize);
+	/*obtainedKeys = intAlloc(obtainedKeysSize);
 	for (int i = 0; i < T; i++) {
                 if (rank != i) {
                         int length = splitters[i + 1] - splitters[i];
@@ -124,7 +140,7 @@ void phase_3() {
 				}
                         }
                 }
-        }
+        } */
 	free(partition);
 	free(splitters);
 }
