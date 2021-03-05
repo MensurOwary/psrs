@@ -26,6 +26,43 @@ static inline void recv(int* buffer, int bufferSize, int src) {
 	MPI_Recv(buffer, bufferSize, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
+void phase_1(int partitionSize, int T, int W) {
+	// Phase 1: Sorting local data
+	qsort(partition, partitionSize, bytes(1), cmpfunc);
+	
+	// Phase 1: Regular sampling
+	localRegularSamples = intAlloc(T);
+	for (int i = 0, ix = 0; i < T; i++) {
+		localRegularSamples[ix++] = partition[i * W];
+	}
+}
+
+void phase_2(int rank, int T, int RO) {
+	// Phase 2: Sending samples to master
+	MASTER {
+		regularSamples = intAlloc(T * T); 
+		for (int i = 1; i < T; i++) {
+			recv(regularSamples + T * i, T, i);
+		}
+		memcpy(regularSamples, localRegularSamples, bytes(T)); 
+	} SLAVE {
+		send(localRegularSamples, T, ROOT);
+	}
+	free(localRegularSamples);
+	// Phase 2: Sorting samples and picking pivots
+	pivots = intAlloc(T - 1);
+	MASTER {
+		qsort(regularSamples, T * T, bytes(1), cmpfunc);
+		for (int i = 1, ix = 0; i < T; i++) {
+			int pos = T * i + RO - 1;
+			pivots[ix++] = regularSamples[pos];
+		}
+		free(regularSamples);
+	}
+	// Phase 2: Send pivots to all workers/slaves
+	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
+}
+
 int main(int argc, char *argv[]) {
 	int SIZE = atoi(argv[1]);
 
@@ -53,37 +90,10 @@ int main(int argc, char *argv[]) {
 	} SLAVE {
 		recv(partition, partitionSize, ROOT);
 	}
-	// Phase 1: Sorting local data
-	qsort(partition, partitionSize, bytes(1), cmpfunc);
-	
-	// Phase 1: Regular sampling
-	localRegularSamples = intAlloc(T);
-	for (int i = 0, ix = 0; i < T; i++) {
-		localRegularSamples[ix++] = partition[i * W];
-	}
-	// Phase 2: Sending samples to master
-	MASTER {
-		regularSamples = intAlloc(T * T); 
-		for (int i = 1; i < T; i++) {
-			recv(regularSamples + T * i, T, i);
-		}
-		memcpy(regularSamples, localRegularSamples, bytes(T)); 
-	} SLAVE {
-		send(localRegularSamples, T, ROOT);
-	}
-	free(localRegularSamples);
-	// Phase 2: Sorting samples and picking pivots
-	pivots = intAlloc(T - 1);
-	MASTER {
-		qsort(regularSamples, T * T, bytes(1), cmpfunc);
-		for (int i = 1, ix = 0; i < T; i++) {
-			int pos = T * i + RO - 1;
-			pivots[ix++] = regularSamples[pos];
-		}
-		free(regularSamples);
-	}
-	// Phase 2: Send pivots to all workers/slaves
-	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
+	// PHASE 1
+	phase_1(partitionSize, T, W);
+	// PHASE 2
+	phase_2(rank, T, RO);
 	// Phase 3: Finding splitting positions
 	splitters = intAlloc(T + 1);
 	splitters[0] = 0;
