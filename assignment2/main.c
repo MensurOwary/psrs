@@ -17,7 +17,13 @@ int* splitters;
 int* lengths;
 int* obtainedKeys;
 int* mergedArray;
+
 int obtainedKeysSize = 0;
+int partitionSize;
+int T;
+int W;
+int RO;
+int rank;
 
 static inline void send(int* data, int size, int dest) {
 	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
@@ -27,7 +33,7 @@ static inline void recv(int* buffer, int bufferSize, int src) {
 	MPI_Recv(buffer, bufferSize, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
-void phase_1(int partitionSize, int T, int W) {
+void phase_1() {
 	// Phase 1: Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
 	
@@ -38,7 +44,7 @@ void phase_1(int partitionSize, int T, int W) {
 	}
 }
 
-void phase_2(int rank, int T, int RO) {
+void phase_2() {
 	// Phase 2: Sending samples to master
 	MASTER {
 		regularSamples = intAlloc(T * T); 
@@ -64,7 +70,7 @@ void phase_2(int rank, int T, int RO) {
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 }
 
-void phase_3(int rank, int T, int partitionSize) {
+void phase_3() {
 	// Phase 3: Finding splitting positions
 	splitters = intAlloc(T + 1);
 	splitters[0] = 0;
@@ -108,9 +114,7 @@ void phase_3(int rank, int T, int partitionSize) {
                 } else {
                         for (int j = 0; j < T; j++) {
                                 if (rank == j) {
-					int offset = 0;
-					for (int k = 0; k < j; k++) offset += lengths[k];
-					memcpy(obtainedKeys + offset, partition + splitters[j], bytes(lengths[j]));
+					memcpy(obtainedKeys + offset(lengths, j), partition + splitters[j], bytes(lengths[j]));
 				} else {
 					int* keysReceived = intAlloc(lengths[j]);
 					recv(keysReceived, lengths[j], j);                                
@@ -129,7 +133,7 @@ void phase_3(int rank, int T, int partitionSize) {
 	free(splitters);
 }
 
-void phase_4(int T) {
+void phase_4() {
 	// Phase 4: Merging obtained keys
 	// Phase 4: Creating the indices array for those pieces (to help merging)
 	int* indices = intAlloc(T * 2);
@@ -166,22 +170,21 @@ void phase_4(int T) {
 }
 
 int main(int argc, char *argv[]) {
-	int SIZE = atoi(argv[1]);
-
 	MPI_Init(NULL, NULL);
 
 	// how many processors are available
-	int T; MPI_Comm_size(MPI_COMM_WORLD, &T);
+	MPI_Comm_size(MPI_COMM_WORLD, &T);
 	
-	int perProcessor = SIZE / T;
-	int W = SIZE / (T * T);
-	int RO = T / 2; 
+	int SIZE = atoi(argv[1]);
+	W = SIZE / (T * T);
+	RO = T / 2; 
 	
 	// what's my rank?
-	int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	// Phase 0: Data distribution
-	int partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+	int perProcessor = SIZE / T;
+	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
 	partition = intAlloc(partitionSize);
 	MASTER {
 		int* DATA = generateArrayDefault(SIZE);
@@ -193,13 +196,13 @@ int main(int argc, char *argv[]) {
 		recv(partition, partitionSize, ROOT);
 	}
 	// PHASE 1
-	phase_1(partitionSize, T, W);
+	phase_1();
 	// PHASE 2
-	phase_2(rank, T, RO);
+	phase_2();
 	// PHASE 3
-	phase_3(rank, T, partitionSize);
+	phase_3();
 	// PHASE 4
-	phase_4(T);	
+	phase_4();	
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
@@ -221,9 +224,7 @@ int main(int argc, char *argv[]) {
 		for (int i = 1; i < T; i++) {
 			int* array = intAlloc(lengths[i]);
 			recv(array, lengths[i], i);
-			int offset = 0;
-			for (int x = 0; x < i; x++) offset += lengths[x];
-			memcpy(FINAL + offset, array, bytes(lengths[i]));
+			memcpy(FINAL + offset(lengths, i), array, bytes(lengths[i]));
 			free(array);
 		}
 		isSorted(FINAL, SIZE);

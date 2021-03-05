@@ -31,6 +31,12 @@ static inline int* intAlloc(int size) {
 	return malloc(bytes(size));
 }
 
+static inline int offset(int* arr, int until) {
+	int offset = 0;
+	for (int x = 0; x < until; x++) offset += arr[x];
+	return offset;
+}
+
 int* generateArrayDefault(int size) {
 	srandom(15);
 	int* r = intAlloc(size);
