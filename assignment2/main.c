@@ -186,37 +186,33 @@ int main(int argc, char *argv[]) {
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
-		// lengths[0] = obtainedKeysSize;
-		// for (int i = 1; i < T; i++) {
-		// 	int length;
-		// 	recv(&length, 1, i);
-		//	lengths[i] = length;
-		// }
 	} SLAVE {
-		// send(&obtainedKeysSize, 1, ROOT);
 		free(lengths);
 	}
 	MPI_Gather(&obtainedKeysSize, 1, MPI_INT, lengths, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 
 	// getting arrays from workers 
+	int* FINAL = NULL;
 	MASTER {
-		int* FINAL = intAlloc(SIZE);
-		memcpy(FINAL, mergedArray, bytes(obtainedKeysSize));
-		free(mergedArray);
-		for (int i = 1; i < T; i++) {
-			int* array = intAlloc(lengths[i]);
-			recv(array, lengths[i], i);
-			memcpy(FINAL + offset(lengths, i), array, bytes(lengths[i]));
-			free(array);
-		}
-		isSorted(FINAL, SIZE);
-		free(lengths);
-		free(FINAL);
+		FINAL = intAlloc(SIZE);
+		// memcpy(FINAL, mergedArray, bytes(obtainedKeysSize));
+		// free(mergedArray);
+		// for (int i = 1; i < T; i++) {
+		//	int* array = intAlloc(lengths[i]);
+		//	recv(array, lengths[i], i);
+		//	memcpy(FINAL + offset(lengths, i), array, bytes(lengths[i]));
+		//	free(array);
+		// }
+		// isSorted(FINAL, SIZE);
+		// free(lengths);
+		// free(FINAL);
 	} SLAVE {
-		send(mergedArray, obtainedKeysSize, ROOT);
-		free(mergedArray);
+		// send(mergedArray, obtainedKeysSize, ROOT);
+		// free(mergedArray);
 	}
+	
+	MPI_Gatherv(&mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, createPositions(lengths, T), MPI_INT, ROOT, MPI_COMM_WORLD);
 
 	MPI_Finalize();
 }
