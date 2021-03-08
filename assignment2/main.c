@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
 		// send(&obtainedKeysSize, 1, ROOT);
 		free(lengths);
 	}
-	MPI_Gather(&obtainedKeysSize, 1, MPI_INT, lengths, T, MPI_INT, ROOT, MPI_COMM_WORLD);
+	MPI_Gather(&obtainedKeysSize, 1, MPI_INT, lengths, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 
 	// getting arrays from workers 
