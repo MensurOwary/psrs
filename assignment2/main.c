@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
 		lengths = NULL;
 	}
 	
-	MPI_Gatherv(&mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, disp, MPI_INT, ROOT, MPI_COMM_WORLD);
+	MPI_Gatherv(mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, disp, MPI_INT, ROOT, MPI_COMM_WORLD);
 	MASTER {
 		isSorted(FINAL, SIZE);
 	}
