@@ -215,9 +215,13 @@ int main(int argc, char *argv[]) {
 	} SLAVE {
 		// send(mergedArray, obtainedKeysSize, ROOT);
 		// free(mergedArray);
+		lengths = NULL;
 	}
 	
 	MPI_Gatherv(&mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, disp, MPI_INT, ROOT, MPI_COMM_WORLD);
+	MASTER {
+		isSorted(FINAL, SIZE);
+	}
 
 	MPI_Finalize();
 }
