@@ -44,3 +44,14 @@ int* generateArrayDefault(int size) {
 	return r;
 }
 
+
+int* createPositions(int* array, int size) {
+	int* positions = intAlloc(size);
+	int pos = 0;
+	for (int i = 0; i < size; i++) {
+		positions[i] = pos;
+		pos += array[i];
+	}
+	return positions;
+}
+
