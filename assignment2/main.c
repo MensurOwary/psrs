@@ -194,8 +194,13 @@ int main(int argc, char *argv[]) {
 
 	// getting arrays from workers 
 	int* FINAL = NULL;
+	int* disp = NULL;
 	MASTER {
 		FINAL = intAlloc(SIZE);
+		disp = createPositions(lengths, T);
+		printArray(lengths, T);
+		printf("====\n");
+		printArray(disp, T);
 		// memcpy(FINAL, mergedArray, bytes(obtainedKeysSize));
 		// free(mergedArray);
 		// for (int i = 1; i < T; i++) {
@@ -212,7 +217,7 @@ int main(int argc, char *argv[]) {
 		// free(mergedArray);
 	}
 	
-	MPI_Gatherv(&mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, createPositions(lengths, T), MPI_INT, ROOT, MPI_COMM_WORLD);
+	MPI_Gatherv(&mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, disp, MPI_INT, ROOT, MPI_COMM_WORLD);
 
 	MPI_Finalize();
 }
