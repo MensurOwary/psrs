@@ -186,16 +186,19 @@ int main(int argc, char *argv[]) {
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
-		lengths[0] = obtainedKeysSize;
-		for (int i = 1; i < T; i++) {
-			int length;
-			recv(&length, 1, i);
-			lengths[i] = length;
-		}
+		// lengths[0] = obtainedKeysSize;
+		// for (int i = 1; i < T; i++) {
+		// 	int length;
+		// 	recv(&length, 1, i);
+		//	lengths[i] = length;
+		// }
 	} SLAVE {
-		send(&obtainedKeysSize, 1, ROOT);
+		// send(&obtainedKeysSize, 1, ROOT);
 		free(lengths);
 	}
+	MPI_Gather(&obtainedKeysSize, 1, MPI_INT, lengths, T, MPI_INT, ROOT, MPI_COMM_WORLD);
+	
+
 	// getting arrays from workers 
 	MASTER {
 		int* FINAL = intAlloc(SIZE);
