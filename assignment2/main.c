@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 	int perProcessor = SIZE / T;
 	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
 	partition = intAlloc(partitionSize);
-	MASTER {
+	/*MASTER {
 		int* DATA = generateArrayDefault(SIZE);
 		memcpy(partition, DATA, bytes(perProcessor));
 		for (int i = 1; i < T; i++) {
@@ -173,7 +173,22 @@ int main(int argc, char *argv[]) {
 		free(DATA);
 	} SLAVE {
 		recv(partition, partitionSize, ROOT);
+	}*/
+
+	int* lengths_new = NULL;
+	int* disp_new = NULL;
+	int* DATA = NULL;
+	MASTER {
+		DATA = generateArrayDefault(SIZE);
+		lengths_new = intAlloc(T);
+		for (int aRank = 0, l = 0; aRank < T; aRank++) {
+			lengths_new[l++] = (aRank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+		}
+		disp_new = createPositions(lengths_new, T);
 	}
+
+	MPI_Scatterv(DATA, lengths_new, disp_new, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
+	
 	// PHASE 1
 	phase_1();
 	// PHASE 2
