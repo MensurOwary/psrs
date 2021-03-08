@@ -26,14 +26,6 @@ int W;
 int RO;
 int rank;
 
-static inline void send(int* data, int size, int dest) {
-	MPI_Send(data, size, MPI_INT, dest, 0, MPI_COMM_WORLD);
-}
-
-static inline void recv(int* buffer, int bufferSize, int src) {
-	MPI_Recv(buffer, bufferSize, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-}
-
 void phase_0() {
 	int perProcessor = SIZE / T;
 	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
@@ -164,47 +156,7 @@ void phase_4() {
 	// Phase 4: Done, PSRS Done!
 }
 
-int main(int argc, char *argv[]) {
-	MPI_Init(NULL, NULL);
-
-	// how many processors are available
-	MPI_Comm_size(MPI_COMM_WORLD, &T);
-	
-	SIZE = atoi(argv[1]);
-	W = SIZE / (T * T);
-	RO = T / 2; 
-	
-	// what's my rank?
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-	// Phase 0: Data distribution
-	int perProcessor = SIZE / T;
-	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
-	partition = intAlloc(partitionSize);
-
-	int* partitionLengths = NULL;
-	int* partitionDisplacement = NULL;
-	int* DATA = NULL;
-	MASTER {
-		DATA = generateArrayDefault(SIZE);
-		partitionLengths = intAlloc(T);
-		for (int aRank = 0, l = 0; aRank < T; aRank++) {
-			partitionLengths[l++] = (aRank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
-		}
-		partitionDisplacement = createPositions(partitionLengths, T);
-	}
-
-	MPI_Scatterv(DATA, partitionLengths, partitionDisplacement, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
-	
-	// PHASE 1
-	phase_1();
-	// PHASE 2
-	phase_2();
-	// PHASE 3
-	phase_3();
-	// PHASE 4
-	phase_4();
-	// PHASE Merge	
+void phase_merge() {
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
@@ -230,6 +182,34 @@ int main(int argc, char *argv[]) {
 	free(FINAL);
 	free(mergedArray);
 	free(lengths);
+}
 
+
+int main(int argc, char *argv[]) {
+	MPI_Init(&argc, &argv);
+
+	// how many processors are available
+	MPI_Comm_size(MPI_COMM_WORLD, &T);
+	
+	SIZE = atoi(argv[1]);
+	W = SIZE / (T * T);
+	RO = T / 2; 
+	
+	// what's my rank?
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	// Phase 0: Data distribution
+	phase_0();
+	// PHASE 1
+	phase_1();
+	// PHASE 2
+	phase_2();
+	// PHASE 3
+	phase_3();
+	// PHASE 4
+	phase_4();
+	// PHASE Merge	
+	phase_merge();
+	
 	MPI_Finalize();
 }
