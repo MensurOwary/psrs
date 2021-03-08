@@ -21,6 +21,7 @@ int* mergedArray;
 int obtainedKeysSize = 0;
 int partitionSize;
 int T;
+int SIZE;
 int W;
 int RO;
 int rank;
@@ -31,6 +32,32 @@ static inline void send(int* data, int size, int dest) {
 
 static inline void recv(int* buffer, int bufferSize, int src) {
 	MPI_Recv(buffer, bufferSize, MPI_INT, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+}
+
+void phase_0() {
+	int perProcessor = SIZE / T;
+	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+	partition = intAlloc(partitionSize);
+
+	int* partitionLengths = NULL;
+	int* partitionDisplacement = NULL;
+	int* DATA = NULL;
+	MASTER {
+		DATA = generateArrayDefault(SIZE);
+		partitionLengths = intAlloc(T);
+		for (int aRank = 0, l = 0; aRank < T; aRank++) {
+			partitionLengths[l++] = (aRank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+		}
+		partitionDisplacement = createPositions(partitionLengths, T);
+	}
+
+	MPI_Scatterv(DATA, partitionLengths, partitionDisplacement, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
+	
+	MASTER {
+		free(partitionLengths);
+		free(DATA);
+		free(partitionDisplacement);
+	}
 }
 
 void phase_1() {
@@ -64,16 +91,6 @@ void phase_2() {
 	}
 	// Phase 2: Send pivots to all workers/slaves
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
-}
-
-int* createPositions(int* array, int size) {
-	int* positions = intAlloc(size);
-	int pos = 0;
-	for (int i = 0; i < size; i++) {
-		positions[i] = pos;
-		pos += array[i];
-	}
-	return positions;
 }
 
 void phase_3() {
@@ -153,7 +170,7 @@ int main(int argc, char *argv[]) {
 	// how many processors are available
 	MPI_Comm_size(MPI_COMM_WORLD, &T);
 	
-	int SIZE = atoi(argv[1]);
+	SIZE = atoi(argv[1]);
 	W = SIZE / (T * T);
 	RO = T / 2; 
 	
@@ -164,30 +181,20 @@ int main(int argc, char *argv[]) {
 	int perProcessor = SIZE / T;
 	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
 	partition = intAlloc(partitionSize);
-	/*MASTER {
-		int* DATA = generateArrayDefault(SIZE);
-		memcpy(partition, DATA, bytes(perProcessor));
-		for (int i = 1; i < T; i++) {
-			send(DATA + i * perProcessor, partitionSize, i);
-		}
-		free(DATA);
-	} SLAVE {
-		recv(partition, partitionSize, ROOT);
-	}*/
 
-	int* lengths_new = NULL;
-	int* disp_new = NULL;
+	int* partitionLengths = NULL;
+	int* partitionDisplacement = NULL;
 	int* DATA = NULL;
 	MASTER {
 		DATA = generateArrayDefault(SIZE);
-		lengths_new = intAlloc(T);
+		partitionLengths = intAlloc(T);
 		for (int aRank = 0, l = 0; aRank < T; aRank++) {
-			lengths_new[l++] = (aRank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+			partitionLengths[l++] = (aRank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
 		}
-		disp_new = createPositions(lengths_new, T);
+		partitionDisplacement = createPositions(partitionLengths, T);
 	}
 
-	MPI_Scatterv(DATA, lengths_new, disp_new, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
+	MPI_Scatterv(DATA, partitionLengths, partitionDisplacement, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 	// PHASE 1
 	phase_1();
