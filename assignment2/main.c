@@ -230,6 +230,7 @@ int main(int argc, char *argv[]) {
 
 	// Phase 0: Data distribution
 	measureTime(phase_0, processor_name, "Phase 0", rank == 0);
+	struct timeval* start = getTime();
 	// PHASE 1
 	measureTime(phase_1, processor_name, "Phase 1", 1);
 	// PHASE 2
@@ -238,8 +239,11 @@ int main(int argc, char *argv[]) {
 	measureTime(phase_3, processor_name, "Phase 3", 1);
 	// PHASE 4
 	measureTime(phase_4, processor_name, "Phase 4", 1);
+	long int time = endTiming(start);
 	// PHASE Merge	
 	measureTime(phase_merge, processor_name, "Phase Merge", rank == 0);
+	
+	MASTER printf("Complete execution took: %ld ms\n", time);
 	
 	MPI_Finalize();
 }
