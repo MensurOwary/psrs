@@ -200,11 +200,15 @@ long int endTiming(struct timeval* start) {
 	return diff;
 }
 
-void measureTime(void (*fun)(), char* processorName, char* title) {
-	struct timeval* start = getTime();
-	fun();
-	long int time = endTiming(start);
-	printf("[%s] %s took %ld ms\n", processorName, title, time);
+void measureTime(void (*fun)(), char* processorName, char* title, int shouldLog) {
+	if (shouldLog) {
+		struct timeval* start = getTime();
+		fun();
+		long int time = endTiming(start);
+		printf("[%s] %s took %ld ms\n", processorName, title, time);
+	} else {
+		fun();
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -225,17 +229,17 @@ int main(int argc, char *argv[]) {
     	MPI_Get_processor_name(processor_name, &name_len);
 
 	// Phase 0: Data distribution
-	measureTime(phase_0, processor_name, "Phase 0");
+	measureTime(phase_0, processor_name, "Phase 0", rank == 0);
 	// PHASE 1
-	measureTime(phase_1, processor_name, "Phase 1");
+	measureTime(phase_1, processor_name, "Phase 1", 1);
 	// PHASE 2
-	measureTime(phase_2, processor_name, "Phase 2");
+	measureTime(phase_2, processor_name, "Phase 2", rank == 0);
 	// PHASE 3
-	measureTime(phase_3, processor_name, "Phase 3");
+	measureTime(phase_3, processor_name, "Phase 3", 1);
 	// PHASE 4
-	measureTime(phase_4, processor_name, "Phase 4");
+	measureTime(phase_4, processor_name, "Phase 4", 1);
 	// PHASE Merge	
-	measureTime(phase_merge, processor_name, "Phase Merge");
+	measureTime(phase_merge, processor_name, "Phase Merge", rank == 0);
 	
 	MPI_Finalize();
 }
