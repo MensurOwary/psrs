@@ -45,11 +45,9 @@ void phase_0() {
 
 	MPI_Scatterv(DATA, partitionLengths, partitionDisplacement, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
-	MASTER {
-		free(partitionLengths);
-		free(DATA);
-		free(partitionDisplacement);
-	}
+	free(partitionLengths);
+	free(DATA);
+	free(partitionDisplacement);
 }
 
 void phase_1() {
@@ -70,6 +68,7 @@ void phase_2() {
 	}
 
 	MPI_Gather(localRegularSamples, T, MPI_INT, regularSamples, T, MPI_INT, ROOT, MPI_COMM_WORLD);
+	free(localRegularSamples);
 
 	// Phase 2: Sorting samples and picking pivots
 	pivots = intAlloc(T - 1);
@@ -159,7 +158,8 @@ void phase_4() {
 void phase_merge() {
 	// determining the individual lengths of the final array
 	MASTER {
-		lengths = realloc(lengths, T);
+		free(lengths);
+		lengths = intAlloc(T);
 	}
 
 	MPI_Gather(&obtainedKeysSize, 1, MPI_INT, lengths, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
@@ -172,13 +172,15 @@ void phase_merge() {
 		FINAL = intAlloc(SIZE);
 		displacements = createPositions(lengths, T);
 	} SLAVE {
+		free(lengths);
 		lengths = NULL;
 	}
 	
 	MPI_Gatherv(mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, displacements, MPI_INT, ROOT, MPI_COMM_WORLD);
 
 	MASTER { isSorted(FINAL, SIZE); }
-
+	
+	free(displacements);
 	free(FINAL);
 	free(mergedArray);
 	free(lengths);
