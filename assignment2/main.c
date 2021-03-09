@@ -152,13 +152,13 @@ void phase_4() {
 	}
 	free(obtainedKeys);
 	free(indices);
+	free(lengths);
 	// Phase 4: Done, PSRS Done!
 }
 
 void phase_merge() {
 	// determining the individual lengths of the final array
 	MASTER {
-		free(lengths);
 		lengths = intAlloc(T);
 	}
 
@@ -172,7 +172,6 @@ void phase_merge() {
 		FINAL = intAlloc(SIZE);
 		displacements = createPositions(lengths, T);
 	} SLAVE {
-		free(lengths);
 		lengths = NULL;
 	}
 	
