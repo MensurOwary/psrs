@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 #include "helper.h"
 
 #define DEBUG if (1 != 1)
@@ -185,6 +187,25 @@ void phase_merge() {
 	free(lengths);
 }
 
+struct timeval* getTime(){
+	struct timeval* t = malloc(sizeof(struct timeval));
+	gettimeofday(t, NULL);
+	return t;
+}
+
+long int endTiming(struct timeval* start) {
+	struct timeval end; gettimeofday(&end, NULL);
+	long int diff = (long int) ((end.tv_sec * 1000000 + end.tv_usec) - (start->tv_sec * 1000000 + start->tv_usec));
+	free(start);
+	return diff;
+}
+
+void measureTime(void (*fun)(), char* processorName, char* title) {
+	struct timeval* start = getTime();
+	fun();
+	long int time = endTiming(start);
+	printf("[%s] %s took %ld ms\n", processorName, title, time);
+}
 
 int main(int argc, char *argv[]) {
 	MPI_Init(&argc, &argv);
@@ -198,19 +219,23 @@ int main(int argc, char *argv[]) {
 	
 	// what's my rank?
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	
+	char processor_name[MPI_MAX_PROCESSOR_NAME];
+    	int name_len;
+    	MPI_Get_processor_name(processor_name, &name_len);
 
 	// Phase 0: Data distribution
-	phase_0();
+	measureTime(phase_0, processor_name, "Phase 0");
 	// PHASE 1
-	phase_1();
+	measureTime(phase_1, processor_name, "Phase 1");
 	// PHASE 2
-	phase_2();
+	measureTime(phase_2, processor_name, "Phase 2");
 	// PHASE 3
-	phase_3();
+	measureTime(phase_3, processor_name, "Phase 3");
 	// PHASE 4
-	phase_4();
+	measureTime(phase_4, processor_name, "Phase 4");
 	// PHASE Merge	
-	phase_merge();
+	measureTime(phase_merge, processor_name, "Phase Merge");
 	
 	MPI_Finalize();
 }
