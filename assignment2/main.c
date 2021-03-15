@@ -61,6 +61,7 @@ void phase_1() {
 	for (int i = 0, ix = 0; i < T; i++) {
 		localRegularSamples[ix++] = partition[i * W];
 	}
+	printf("[%d] sorted %d elements\n", rank, partitionSize);
 }
 
 void phase_2() {
@@ -155,6 +156,7 @@ void phase_4() {
 	free(obtainedKeys);
 	free(indices);
 	free(lengths);
+	printf("[%d] merged %d keys\n", rank, obtainedKeysSize);
 	// Phase 4: Done, PSRS Done!
 }
 
