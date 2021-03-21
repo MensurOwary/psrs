@@ -1,0 +1,16 @@
+[ubuntu1:0] Phase 0 took 7855 ms
+[1] sorted 500000 elements
+[ubuntu1:1] Phase 1 took 58996 ms
+[0] sorted 500000 elements
+[ubuntu1:0] Phase 1 took 61457 ms
+[ubuntu1:0] Phase 2 took 9 ms
+[ubuntu1:1] Phase 2 took 2494 ms
+[ubuntu1:0] Phase 3 took 1122 ms
+[ubuntu1:1] Phase 3 took 1090 ms
+[0] merged 499024 keys
+[1] merged 500976 keys
+[ubuntu1:1] Phase 4 took 5274 ms
+[ubuntu1:0] Phase 4 took 5889 ms
+Sorted
+[ubuntu1:0] Phase Merge took 2079 ms
+Complete execution took: 68581 ms

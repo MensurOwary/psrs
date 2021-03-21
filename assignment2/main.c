@@ -7,6 +7,7 @@
 #include "helper.h"
 
 #define DEBUG if (1 != 1)
+#define CHECK_SORTED if (1 != 1)
 #define ROOT 0
 #define MASTER if (rank == ROOT)
 #define SLAVE else
@@ -181,7 +182,7 @@ void phase_merge() {
 	
 	MPI_Gatherv(mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, displacements, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-	MASTER { isSorted(FINAL, SIZE); }
+	MASTER { CHECK_SORTED isSorted(FINAL, SIZE); }
 	
 	free(displacements);
 	free(FINAL);
