@@ -1,0 +1,27 @@
+[mpi0:0] Phase 0 took 2100733 ms
+[2] sorted 4000000 elements
+[mpi0:2] Phase 1 took 2281209 ms
+[3] sorted 4000000 elements
+[mpi0:3] Phase 1 took 2309419 ms
+[1] sorted 4000000 elements
+[mpi0:1] Phase 1 took 2418599 ms
+[0] sorted 4000000 elements
+[mpi0:0] Phase 1 took 2424899 ms
+[mpi0:0] Phase 2 took 18 ms
+[mpi0:1] Phase 2 took 9405 ms
+[mpi0:2] Phase 2 took 142730 ms
+[mpi0:3] Phase 2 took 133119 ms
+[mpi0:1] Phase 3 took 688860 ms
+[mpi0:2] Phase 3 took 688927 ms
+[mpi0:3] Phase 3 took 674270 ms
+[mpi0:0] Phase 3 took 700807 ms
+[3] merged 4000557 keys
+[mpi0:3] Phase 4 took 269489 ms
+[0] merged 3998598 keys
+[mpi0:0] Phase 4 took 269880 ms
+[2] merged 4001739 keys
+[mpi0:2] Phase 4 took 348641 ms
+[1] merged 3999106 keys
+[mpi0:1] Phase 4 took 383382 ms
+[mpi0:0] Phase Merge took 1556389 ms
+Complete execution took: 3520551 ms

@@ -1,0 +1,15 @@
+[mpi0:0] Phase 0 took 445424 ms
+[1] sorted 8000000 elements
+[mpi0:1] Phase 1 took 2502318 ms
+[0] sorted 8000000 elements
+[mpi0:0] Phase 1 took 2505358 ms
+[mpi0:0] Phase 2 took 90 ms
+[mpi0:1] Phase 2 took 3080 ms
+[mpi0:0] Phase 3 took 77810 ms
+[mpi0:1] Phase 3 took 78127 ms
+[0] merged 7999600 keys
+[mpi0:0] Phase 4 took 207244 ms
+[1] merged 8000400 keys
+[mpi0:1] Phase 4 took 210761 ms
+[mpi0:0] Phase Merge took 108613 ms
+Complete execution took: 2794492 ms
