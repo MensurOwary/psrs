@@ -13,7 +13,7 @@ do
 		for time in {1..5}
 		do
 			echo "Running ${process_count} : ${size} - $time time"
-			mpirun -n $process_count ./a.out $size > ./data/out-"$process_count-$size-$time".txt
+			mpirun -n $process_count -f hosts_new ./a.out $size > ./data/out-"$process_count-$size-$time".txt
 		done
 	done
 done

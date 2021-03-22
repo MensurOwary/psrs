@@ -1,39 +1,39 @@
-[mpi0:0] Phase 0 took 16399262 ms
-[5] sorted 10666670 elements
-[mpi0:5] Phase 1 took 9850103 ms
-[4] sorted 10666666 elements
-[mpi0:4] Phase 1 took 10184025 ms
+[mpi0:0] Phase 0 took 1927808 ms
 [2] sorted 10666666 elements
-[mpi0:2] Phase 1 took 10230549 ms
-[0] sorted 10666666 elements
-[mpi0:0] Phase 1 took 10338659 ms
+[mpi2:2] Phase 1 took 2456481 ms
+[5] sorted 10666670 elements
+[mpi1:5] Phase 1 took 2501003 ms
 [1] sorted 10666666 elements
-[mpi0:1] Phase 1 took 10365219 ms
+[mpi1:1] Phase 1 took 2570991 ms
 [3] sorted 10666666 elements
-[mpi0:3] Phase 1 took 10734304 ms
-[mpi0:0] Phase 2 took 445268 ms
-[mpi0:1] Phase 2 took 402788 ms
-[mpi0:4] Phase 2 took 591907 ms
-[mpi0:5] Phase 2 took 897920 ms
-[mpi0:2] Phase 2 took 561385 ms
-[mpi0:3] Phase 2 took 35208 ms
-[mpi0:5] Phase 3 took 3709867 ms
-[mpi0:2] Phase 3 took 4598658 ms
-[mpi0:1] Phase 3 took 4794807 ms
-[mpi0:3] Phase 3 took 4786719 ms
-[mpi0:4] Phase 3 took 5282617 ms
-[mpi0:0] Phase 3 took 5302404 ms
+[mpi3:3] Phase 1 took 3015255 ms
+[4] sorted 10666666 elements
+[mpi0:4] Phase 1 took 3383488 ms
+[0] sorted 10666666 elements
+[mpi0:0] Phase 1 took 3400238 ms
+[mpi0:0] Phase 2 took 234 ms
+[mpi0:4] Phase 2 took 16980 ms
+[mpi1:1] Phase 2 took 829927 ms
+[mpi1:5] Phase 2 took 899883 ms
+[mpi2:2] Phase 2 took 944414 ms
+[mpi3:3] Phase 2 took 385939 ms
+[mpi3:3] Phase 3 took 250536 ms
+[mpi1:1] Phase 3 took 284585 ms
+[mpi1:5] Phase 3 took 284790 ms
+[mpi0:4] Phase 3 took 288033 ms
+[mpi0:0] Phase 3 took 288590 ms
+[mpi2:2] Phase 3 took 288998 ms
 [5] merged 10669552 keys
-[mpi0:5] Phase 4 took 1754245 ms
-[1] merged 10661370 keys
-[mpi0:1] Phase 4 took 1382966 ms
-[2] merged 10670033 keys
-[mpi0:2] Phase 4 took 1593323 ms
+[mpi1:5] Phase 4 took 385117 ms
 [3] merged 10665908 keys
-[mpi0:3] Phase 4 took 1589383 ms
-[0] merged 10665597 keys
-[mpi0:0] Phase 4 took 1327420 ms
+[mpi3:3] Phase 4 took 450280 ms
+[1] merged 10661370 keys
+[mpi1:1] Phase 4 took 422142 ms
+[2] merged 10670033 keys
+[mpi2:2] Phase 4 took 423183 ms
 [4] merged 10667540 keys
-[mpi0:4] Phase 4 took 1669428 ms
-[mpi0:0] Phase Merge took 11718469 ms
-Complete execution took: 17764035 ms
+[mpi0:4] Phase 4 took 521747 ms
+[0] merged 10665597 keys
+[mpi0:0] Phase 4 took 525490 ms
+[mpi0:0] Phase Merge took 514307 ms
+Complete execution took: 4214771 ms
