@@ -1,0 +1,10 @@
+Complete execution took 16840586 ms
+Sorted
+Complete execution took 17096958 ms
+Sorted
+Complete execution took 17263510 ms
+Sorted
+Complete execution took 16917941 ms
+Sorted
+Complete execution took 16699911 ms
+Sorted
