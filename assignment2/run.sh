@@ -14,7 +14,7 @@ do
 		{
 		for time in {1..5}
 		do
-			mpirun -n $process_count -f hosts ./a.out $size
+			mpirun -n $process_count -f hosts_new ./a.out $size
 		done
 		} > ./data_p2p/out-"$process_count-$size".txt
 	done
