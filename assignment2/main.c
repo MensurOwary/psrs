@@ -67,7 +67,16 @@ void phase_2() {
 		free(regularSamples);
 	}
 	// Phase 2: Send pivots to all workers/slaves
-	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
+	// MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
+	MASTER {
+		// send
+		for (int i = 1; i < T; i++) {
+			send(pivots, T - 1, ROOT);
+		}
+	} SLAVE {
+		// receive
+		recv(pivots, T - 1, ROOT);
+	}
 }
 
 void phase_3() {
