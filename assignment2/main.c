@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 #include "helper.h"
 
 #define DEBUG if (1 != 1)
@@ -205,6 +207,10 @@ int main(int argc, char *argv[]) {
 	} SLAVE {
 		recv(partition, partitionSize, ROOT);
 	}
+	
+	MPI_Barrier(MPI_COMM_WORLD);
+	struct timeval* start = malloc(sizeof(struct timeval));
+	gettimeofday(start, NULL);	
 	// PHASE 1
 	phase_1();
 	// PHASE 2
@@ -212,7 +218,12 @@ int main(int argc, char *argv[]) {
 	// PHASE 3
 	phase_3();
 	// PHASE 4
-	phase_4();	
+	phase_4();
+	MPI_Barrier(MPI_COMM_WORLD);
+	struct timeval end;
+	gettimeofday(&end, NULL);
+	long int diff = (long int) ((end.tv_sec * 1000000 + end.tv_usec) - (start->tv_sec * 1000000 + start->tv_usec));
+	free (start);	
 	// determining the individual lengths of the final array
 	MASTER {
 		lengths = realloc(lengths, T);
@@ -228,6 +239,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	MASTER {
+		printf("Complete execution took %ld ms\n", diff);
 		int* FINAL = intAlloc(SIZE);
 		memcpy(FINAL, mergedArray, bytes(obtainedKeysSize));
 		free(mergedArray);
