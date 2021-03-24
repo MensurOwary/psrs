@@ -71,7 +71,7 @@ void phase_2() {
 	MASTER {
 		// send
 		for (int i = 1; i < T; i++) {
-			send(pivots, T - 1, ROOT);
+			send(pivots, T - 1, i);
 		}
 	} SLAVE {
 		// receive
