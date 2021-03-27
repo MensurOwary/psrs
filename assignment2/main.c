@@ -21,6 +21,8 @@ int* lengths;
 int* obtainedKeys;
 int* mergedArray;
 
+int* DATA;
+
 int obtainedKeysSize = 0;
 int partitionSize;
 int T;
@@ -29,6 +31,18 @@ int W;
 int RO;
 int rank;
 
+void checkSorted(int* final) {
+	qsort(DATA, SIZE, bytes(1), cmpfunc);
+	isSorted(final, SIZE);
+	for (int i = 0; i < SIZE; i++) {
+		if (DATA[i] != final[i]) {
+			printf("Not sorted\n");
+			return;
+		}
+	}
+	printf("Sorted\n");
+}
+
 void phase_0() {
 	int perProcessor = SIZE / T;
 	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
@@ -36,7 +50,7 @@ void phase_0() {
 
 	int* partitionLengths = NULL;
 	int* partitionDisplacement = NULL;
-	int* DATA = NULL;
+	// int* DATA = NULL;
 	MASTER {
 		DATA = generateArrayDefault(SIZE);
 		partitionLengths = intAlloc(T);
@@ -49,7 +63,7 @@ void phase_0() {
 	MPI_Scatterv(DATA, partitionLengths, partitionDisplacement, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 	free(partitionLengths);
-	free(DATA);
+	// free(DATA);
 	free(partitionDisplacement);
 }
 
@@ -182,10 +196,11 @@ void phase_merge() {
 	
 	MPI_Gatherv(mergedArray, obtainedKeysSize, MPI_INT, FINAL, lengths, displacements, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-	MASTER { CHECK_SORTED isSorted(FINAL, SIZE); }
+	MASTER { CHECK_SORTED checkSorted(FINAL); }
 	
 	free(displacements);
 	free(FINAL);
+	free(DATA);
 	free(mergedArray);
 	free(lengths);
 }
