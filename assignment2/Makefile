@@ -1,13 +1,15 @@
-all: 
-	mpicc -Wall -O -o a.out main.c
+CC=mpicc
+TARGET=a.out
+CFLAGS=-Wall -O
+SOURCES=main.c
+MR=mpirun
+MRARGS=-n $(n) -f hosts
 
+all:
+	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)
+compile:
+	$(CC) $(CFLAGS) $(SOURCES) -o $(TARGET)
 run: 
-	mpirun -n $(n) -f hosts ./a.out $(args)
-
-push:
-	git add -A
-	git commit -m "Sync"
-	git push
-pull:
-	rm -f a.out
-	git pull
+	$(MR) $(MRARGS) ./$(TARGET) $(args)
+clean:
+	rm $(TARGET) 

@@ -7,12 +7,6 @@ void printArray(int* a, int size) {
 	printf("\n");
 }
 
-int findInitialMinPos(int * indices, int size) {
-	for (int i = 0; i < size; i+=2)
-		if (indices[i] != indices[i+1]) return i;
-	return -1;
-}
-
 void isSorted(int* arr, int size) {
 	for (int i = 0; i < size - 1; i++) {
 		if (arr[i] > arr[i+1]) {
@@ -54,4 +48,19 @@ int* createPositions(int* array, int size) {
 	}
 	return positions;
 }
+
+
+struct timeval* getTime(){
+	struct timeval* t = malloc(sizeof(struct timeval));
+	gettimeofday(t, NULL);
+	return t;
+}
+
+long int endTiming(struct timeval* start) {
+	struct timeval end; gettimeofday(&end, NULL);
+	long int diff = (long int) ((end.tv_sec * 1000000 + end.tv_usec) - (start->tv_sec * 1000000 + start->tv_usec));
+	free(start);
+	return diff;
+}
+
 

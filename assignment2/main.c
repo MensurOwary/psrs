@@ -12,15 +12,21 @@
 #define MASTER if (rank == ROOT)
 #define SLAVE else
 
+// partition that a processor gets
 int* partition;
 int* localRegularSamples;
 int* regularSamples;
 int* pivots;
+// splitting indices
 int* splitters;
+// lengths of those split array pieces
 int* lengths;
+// obtained keys from other processors
 int* obtainedKeys;
+// locally merged array
 int* mergedArray;
 
+// the actual array that neeeds to be sorted
 int* DATA;
 
 int obtainedKeysSize = 0;
@@ -31,28 +37,33 @@ int W;
 int RO;
 int rank;
 
-void checkSorted(int* final) {
+// checks if the array is sorted
+void checkSorted(int* arr) {
 	qsort(DATA, SIZE, bytes(1), cmpfunc);
-	isSorted(final, SIZE);
+	isSorted(arr, SIZE);
 	for (int i = 0; i < SIZE; i++) {
-		if (DATA[i] != final[i]) {
-			printf("Not sorted\n");
+		if (DATA[i] != arr[i]) {
+			printf("Key by key - not sorted\n");
 			return;
 		}
 	}
-	printf("Sorted\n");
+	printf("Key by Sorted\n");
 }
 
+// data distribution phase
 void phase_0() {
+	// regular key size that a processor will get
 	int perProcessor = SIZE / T;
+	// the actual key size that the processor will get
 	partitionSize = (rank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
+	// allocate sufficient memory for the local array
 	partition = intAlloc(partitionSize);
-
+	
 	int* partitionLengths = NULL;
 	int* partitionDisplacement = NULL;
-	// int* DATA = NULL;
 	MASTER {
 		DATA = generateArrayDefault(SIZE);
+		// array sizes that each processor will get
 		partitionLengths = intAlloc(T);
 		for (int aRank = 0, l = 0; aRank < T; aRank++) {
 			partitionLengths[l++] = (aRank == T - 1) ? SIZE - (T - 1) * perProcessor : perProcessor;
@@ -63,15 +74,15 @@ void phase_0() {
 	MPI_Scatterv(DATA, partitionLengths, partitionDisplacement, MPI_INT, partition, partitionSize, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 	free(partitionLengths);
-	// free(DATA);
 	free(partitionDisplacement);
 }
 
+// local sorting and regular sampling phase
 void phase_1() {
-	// Phase 1: Sorting local data
+	// Sorting local data
 	qsort(partition, partitionSize, bytes(1), cmpfunc);
 	
-	// Phase 1: Regular sampling
+	// Regular sampling
 	localRegularSamples = intAlloc(T);
 	for (int i = 0, ix = 0; i < T; i++) {
 		localRegularSamples[ix++] = partition[i * W];
@@ -79,16 +90,17 @@ void phase_1() {
 	printf("[%d] sorted %d elements\n", rank, partitionSize);
 }
 
+// pivot selection phase
 void phase_2() {
-	// Phase 2: Sending samples to master
+	// Sending samples to master
 	MASTER {
 		regularSamples = intAlloc(T * T); 
 	}
-
+	// get all the local samples
 	MPI_Gather(localRegularSamples, T, MPI_INT, regularSamples, T, MPI_INT, ROOT, MPI_COMM_WORLD);
 	free(localRegularSamples);
 
-	// Phase 2: Sorting samples and picking pivots
+	// Sorting samples and picking pivots
 	pivots = intAlloc(T - 1);
 	MASTER {
 		qsort(regularSamples, T * T, bytes(1), cmpfunc);
@@ -98,10 +110,11 @@ void phase_2() {
 		}
 		free(regularSamples);
 	}
-	// Phase 2: Send pivots to all workers/slaves
+	// Send pivots to all workers/slaves
 	MPI_Bcast(pivots, T - 1, MPI_INT, 0, MPI_COMM_WORLD); 
 }
 
+// split pieces exchange phase
 void phase_3() {
 	// Phase 3: Finding splitting positions
 	splitters = intAlloc(T + 1);
@@ -114,14 +127,14 @@ void phase_3() {
 		}
 	}
 	free(pivots);
-	// Phase 3: Sharing lengths of those pieces (because other nodes need to allocate memory for it)
+	// Sharing lengths of those pieces (because other nodes need to allocate memory for it)
 	int* pieceLengths = intAlloc(T);
 	for (int i = 0; i < T; i++) pieceLengths[i] = splitters[i+1] - splitters[i];
 
 	lengths = intAlloc(T);	
 	MPI_Alltoall(pieceLengths, 1, MPI_INT, lengths, 1, MPI_INT, MPI_COMM_WORLD);
 	
-	// Phase 3: Sharing array pieces
+	// Sharing array pieces
 	int* positionsSend = createPositions(pieceLengths, T);
 	int* positionsRecv = createPositions(lengths, T);
 
@@ -138,9 +151,27 @@ void phase_3() {
 	free(splitters);
 }
 
+// given an array of indices, 
+// it returns the first valid index
+// 
+// since indices is an array that contains the range
+// each time an element from that range is picked as
+// current minimum, its starting index gets incremented by 1
+// which means when the lower index reaches the high bound
+// it should no longer be considered
+//
+// elements in indices array are places as
+// (r1start, r1end, r2start, r2end, ..., rnstart, rnend) where n is T
+int findInitialMinPos(int * indices, int size) {
+	for (int i = 0; i < size; i+=2)
+		if (indices[i] != indices[i+1]) return i;
+	return -1;
+}
+
+// local merge phase
 void phase_4() {
-	// Phase 4: Merging obtained keys
-	// Phase 4: Creating the indices array for those pieces (to help merging)
+	// Merging obtained keys
+	// Creating the indices array for those pieces (to help merging)
 	int* indices = intAlloc(T * 2);
 	indices[0] = 0;
 	indices[T * 2 - 1] = obtainedKeysSize;
@@ -151,7 +182,7 @@ void phase_4() {
 		indices[i+1] = localSum;
 	}
 	
-	// Phase 4: Merging
+	// Merging
 	mergedArray = intAlloc(obtainedKeysSize);
 	for (int mi = 0; mi < obtainedKeysSize; mi++) {
 		int pos = findInitialMinPos(indices, T * 2);
@@ -172,9 +203,11 @@ void phase_4() {
 	free(indices);
 	free(lengths);
 	printf("[%d] merged %d keys\n", rank, obtainedKeysSize);
-	// Phase 4: Done, PSRS Done!
+	// PSRS Done!
 }
 
+// merging all the local arrays 
+// into one single array in master node
 void phase_merge() {
 	// determining the individual lengths of the final array
 	MASTER {
@@ -203,19 +236,6 @@ void phase_merge() {
 	free(DATA);
 	free(mergedArray);
 	free(lengths);
-}
-
-struct timeval* getTime(){
-	struct timeval* t = malloc(sizeof(struct timeval));
-	gettimeofday(t, NULL);
-	return t;
-}
-
-long int endTiming(struct timeval* start) {
-	struct timeval end; gettimeofday(&end, NULL);
-	long int diff = (long int) ((end.tv_sec * 1000000 + end.tv_usec) - (start->tv_sec * 1000000 + start->tv_usec));
-	free(start);
-	return diff;
 }
 
 void measureTime(void (*fun)(), char* processorName, char* title, int shouldLog) {
