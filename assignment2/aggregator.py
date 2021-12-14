@@ -77,6 +77,7 @@ def calculate_single_iteration(filename):
 
     with open(filename) as file:
         for line in file:
+            isRootNode = "[mpi0:0]" in line
             if line.startswith("[mpi"):
                 line = "[" + line[6:]
             line = line.strip()
@@ -85,7 +86,7 @@ def calculate_single_iteration(filename):
                 phase0_line = line
             elif "Phase 1" in line:
                 phase1_lines.append(line)
-            elif "Phase 2" in line:
+            elif "Phase 2" in line and isRootNode:
                 phase2_lines.append(line)
             elif "Phase 3" in line:
                 phase3_lines.append(line)
@@ -320,7 +321,7 @@ def phase_by_phase_graph(df):
     plt.legend(loc="lower left",bbox_to_anchor=(0.8,1.0))
     plt.savefig("./bar.png")
 
-def plot_clustered_stacked(dfall, labels=None, title="multiple stacked bar plot",  H="/", **kwargs):
+def plot_clustered_stacked(dfall, labels=None, title="Phase by Phase Times",  H="/", **kwargs):
     """Given a list of dataframes, with identical columns and index, create a clustered stacked bar plot. 
         labels is a list of the names of the dataframe, used for the legend
         title is a string for the title of the plot
@@ -342,14 +343,14 @@ def plot_clustered_stacked(dfall, labels=None, title="multiple stacked bar plot"
                       **kwargs)  # make bar plots
 
     h,l = axe.get_legend_handles_labels() # get the handles we want to modify
+    l = []
     for i in range(0, n_df * n_col, n_col): # len(h) = n_col * n_df
         for j, pa in enumerate(h[i:i+n_col]):
             for rect in pa.patches: # for each index
-                rect.set_x(rect.get_x() + 1 / float(n_df + 1) * i / float(n_col) - 0.2)
+                xx = rect.get_x() + 1 / float(n_df + 1) * i / float(n_col) - 0.2
+                l.append(xx)
+                rect.set_x(xx)
                 rect.set_width(1 / float(n_df + 1))
-                rect.set_label('AA')
-
-    axe.set_xticks((np.arange(0, 2 * n_ind, 2) + 1 / float(n_df + 1)) / 2.)
     axe.set_xticklabels(df.index, rotation = 0)
     axe.set_title(title)
 
@@ -358,10 +359,11 @@ def plot_clustered_stacked(dfall, labels=None, title="multiple stacked bar plot"
     for i in range(n_df):
         n.append(axe.bar(0, 0, color="gray", hatch=H * i))
 
-    l1 = axe.legend(h[:n_col], l[:n_col], loc=[1.01, 0.5])
+    l1 = axe.legend(h[:n_col], dfall[0].columns, loc=[1.01, 0.5])
     if labels is not None:
         l2 = plt.legend(n, labels, loc=[1.01, 0.1]) 
     axe.add_artist(l1)
+    print(h[:n_col], l[:n_col])
     return axe
 
 if __name__ == "__main__":
@@ -402,25 +404,34 @@ if __name__ == "__main__":
            rdfa
         )
 
+    # pd.options.display.float_format = '{:.0f}'.format
+
     real_times_df = create_real_times_table(FINAL_RESULTS)
     speedup_df = create_speedup_table(real_times_df)
     rdfa_df = create_rdfa_table(FINAL_RESULTS)
     pbp_df, dfs = create_phase_by_phase_table_new(FINAL_RESULTS)
 
-    # print(speedup_df)
+    # sdf = real_times_df.drop([1])
 
-    speedup_graph(speedup_df)
+    rdfa_df.columns = ['1M', '16M', '32M', '64M', '128M', '256M']
+
+    # print(pbp_df)
+
+    # print(pbp_df.to_latex())
+
+    # print(speedup_df)
+    # speedup_graph(speedup_df)
     # phase_by_phase_graph(pbp_df)
 
     # print(pbp_df.columns)
 
     # pbp_df = pbp_df.drop(['Phase 0', 'Phase Merge'], axis=1)
 
-    # plot_clustered_stacked(dfs).get_figure().savefig("./aaa.png")
+    plot_clustered_stacked(dfs).get_figure().savefig("./aaa.png")
 
-    for d in dfs:
-        print(d)
-        print()
+    # for d in dfs:
+        # print(d)
+        # print()
 
     # w = pd.ExcelWriter("./results/data_new_1.xlsx")
 
